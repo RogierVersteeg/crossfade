@@ -40,11 +40,12 @@ constexpr unsigned long DOWNLOAD_PROGRESS_MIN_UPDATE_MS = 5000;
 }  // namespace
 
 OpdsBookBrowserActivity::OpdsBookBrowserActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                                 OpdsServer server)
+                                                 OpdsServer server, const bool hasParentActivity)
     : Activity("OpdsBookBrowser", renderer, mappedInput),
       UiAppHost(renderer),
       buttonNavigator(),
-      server(std::move(server)) {}
+      server(std::move(server)),
+      hasParentActivity(hasParentActivity) {}
 
 void OpdsBookBrowserActivity::onEnter() {
   Activity::onEnter();
@@ -145,7 +146,7 @@ void OpdsBookBrowserActivity::loop() {
 
   if (state == BrowserState::CHECK_WIFI || state == BrowserState::LOADING) {
     if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-      state == BrowserState::CHECK_WIFI ? onGoHome() : navigateBack();
+      state == BrowserState::CHECK_WIFI ? goBackOrHome() : navigateBack();
     }
     return;
   }
@@ -480,9 +481,17 @@ void OpdsBookBrowserActivity::navigateToEntry(const OpdsEntry& entry) {
   fetchFeed(currentPath);
 }
 
+void OpdsBookBrowserActivity::goBackOrHome() {
+  if (hasParentActivity) {
+    finish();
+  } else {
+    onGoHome();
+  }
+}
+
 void OpdsBookBrowserActivity::navigateBack() {
   if (navigationHistory.empty()) {
-    onGoHome();
+    goBackOrHome();
   } else {
     currentPath = navigationHistory.back();
     navigationHistory.pop_back();
