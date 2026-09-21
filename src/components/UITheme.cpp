@@ -17,6 +17,7 @@
 #include "components/themes/lyra/Lyra3CoversTheme.h"
 #include "components/themes/lyra/LyraTheme.h"
 #include "components/themes/roundedraff/RoundedRaffTheme.h"
+#include "fontIds.h"
 
 UITheme UITheme::instance;
 
@@ -159,6 +160,24 @@ int UITheme::getProgressBarHeight() {
   const ThemeMetrics metrics = UITheme::getInstance().getMetrics();
   const auto sb = SETTINGS.statusBarSpec();
   return sb.showsProgressBar() ? (sb.progressBarHeightPx + metrics.progressBarMarginTop) : 0;
+}
+
+void UITheme::drawPageIndicator(const GfxRenderer& renderer, const int bottomInset, const int currentPage,
+                                const int totalPages) {
+  if (totalPages <= 1) {
+    return;
+  }
+  const std::string text = std::to_string(currentPage) + "/" + std::to_string(totalPages);
+  const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, text.c_str());
+  const int lineHeight = renderer.getLineHeight(SMALL_FONT_ID);
+
+  constexpr int margin = 4;
+  constexpr int haloPad = 2;
+  const int x = renderer.getScreenWidth() - textWidth - margin;
+  const int y = renderer.getScreenHeight() - bottomInset - lineHeight - margin;
+
+  renderer.fillRect(x - haloPad, y - haloPad, textWidth + haloPad * 2, lineHeight + haloPad * 2, false);
+  renderer.drawText(SMALL_FONT_ID, x, y, text.c_str());
 }
 
 // Centered text implementation that takes the safe area into account

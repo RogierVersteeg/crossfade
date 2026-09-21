@@ -17,6 +17,7 @@
 #include "ButtonRemapActivity.h"
 #include "ClearCacheActivity.h"
 #include "ClockSettingsActivity.h"
+#include "LibraryIndexRebuildActivity.h"
 #include "CrossPointSettings.h"
 #include "FontDownloadActivity.h"
 #include "HomeButtonSettingsActivity.h"
@@ -62,6 +63,11 @@ void SettingsActivity::rebuildSettingsLists() {
   for (const auto& setting : getSettingsList(&sdFontSystem.registry(), &dictionaries)) {
     if (setting.category == StrId::STR_NONE_OPT || home_button::isSetting(setting.valuePtr)) continue;
     if (setting.category == StrId::STR_CAT_DISPLAY) {
+      // Meaningless with grouping off (no series exist to start in) -- hidden entirely rather
+      // than shown disabled, matching fadingFix's precedent below for the same situation.
+      if (setting.valuePtr == &CrossPointSettings::browseBooksStartInSeries && !SETTINGS.groupBySeries) {
+        continue;
+      }
       // The sunlight fading fix is a grayscale-waveform compensation that does
       // not apply on the X4 Pro / X4 Classic (plain OTP waveform, same panels).
       if (setting.valuePtr == &CrossPointSettings::fadingFix &&
@@ -104,6 +110,7 @@ void SettingsActivity::rebuildSettingsLists() {
   systemSettings.push_back(SettingInfo::Action(StrId::STR_KOREADER_SYNC, SettingAction::KOReaderSync));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_OPDS_SERVERS, SettingAction::OPDSBrowser));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_CLEAR_READING_CACHE, SettingAction::ClearCache));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_REBUILD_LIBRARY_INDEX, SettingAction::RebuildLibraryIndex));
   // OTA fetches this board's own release asset (see OtaUpdater); boards whose
   // asset isn't published yet just report no update available.
   systemSettings.push_back(SettingInfo::Action(StrId::STR_CHECK_UPDATES, SettingAction::CheckForUpdates));
@@ -396,6 +403,9 @@ void SettingsActivity::toggleCurrentSetting() {
       }
       case SettingAction::ClearCache:
         startActivityForResult(std::make_unique<ClearCacheActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::RebuildLibraryIndex:
+        startActivityForResult(std::make_unique<LibraryIndexRebuildActivity>(renderer, mappedInput), resultHandler);
         break;
       case SettingAction::CheckForUpdates:
         startActivityForResult(std::make_unique<OtaUpdateActivity>(renderer, mappedInput), resultHandler);

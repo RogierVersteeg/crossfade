@@ -555,9 +555,35 @@ void HomeActivity::render(RenderLock&&) {
 
 void HomeActivity::onSelectBook(const std::string& path) { activityManager.goToReader(path); }
 
-void HomeActivity::onFileBrowserOpen() { activityManager.goToFileBrowser(); }
+void HomeActivity::onFileBrowserOpen() {
+  // Grouping needs every book's series known before the first page can render correctly, and the
+  // same rebuild also pre-renders any missing cover thumbnails (see LibraryIndexRebuildActivity /
+  // LibraryIndexBuilder's coverBackfill) -- so Covers always routes through an index check first,
+  // even with SETTINGS.groupBySeries off, or covers for never-opened books would only ever appear
+  // lazily as their page happens to be scrolled to. Near-instant if nothing changed since the last
+  // build, a cancellable rebuild otherwise. The stock file browser never groups and is unaffected.
+  //
+  // FILE_BROWSER_TITLES (LibraryListActivity) is ported in the next commit; falls through to the
+  // stock browser until then.
+  switch (SETTINGS.fileBrowserView) {
+    case CrossPointSettings::FILE_BROWSER_COVERS:
+      activityManager.goToLibraryIndexRebuild([] { activityManager.goToCoverGridBrowser(); });
+      break;
+    default:
+      activityManager.goToFileBrowser();
+      break;
+  }
+}
 
-void HomeActivity::onLibraryOpen() { activityManager.goToLibrary(); }
+void HomeActivity::onLibraryOpen() {
+  // CrossFade: the Library entry can show either upstream's tabbed list or CrossFade's
+  // recent-books cover grid (Settings > Display > Library View).
+  if (SETTINGS.recentBooksView == CrossPointSettings::RECENT_BOOKS_COVERS) {
+    activityManager.goToCoverGridRecentBooks();
+  } else {
+    activityManager.goToLibrary();
+  }
+}
 
 void HomeActivity::onSettingsOpen() { activityManager.goToSettings(); }
 

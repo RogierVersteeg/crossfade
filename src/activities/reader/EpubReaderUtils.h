@@ -42,6 +42,31 @@ inline bool saveProgress(const Epub& epub, int spineIndex, int pageNumber, int p
   return true;
 }
 
+// Reads back progress.bin written by saveProgress(). Returns false if no progress is cached
+// (spineIndex/pageNumber/pageCount are left unchanged). pageCount is only set when a 6- or
+// 10-byte format is present; callers should treat a pageCount of 0 as "unknown" for older 4-byte
+// saves. Ignores the 10-byte format's visibleTextOffset -- callers that need it read progress.bin
+// directly (see EpubReaderActivity::loadBook()).
+inline bool loadProgress(const std::string& cachePath, int& spineIndex, int& pageNumber, int& pageCount) {
+  HalFile f;
+  if (!Storage.openFileForRead("ERS", cachePath + "/progress.bin", f)) return false;
+  uint8_t data[10];
+  const int dataSize = f.read(data, sizeof(data));
+  if (dataSize != 4 && dataSize != 6 && dataSize != 10) return false;
+
+  spineIndex = data[0] + (data[1] << 8);
+  pageNumber = data[2] + (data[3] << 8);
+  if (pageNumber == UINT16_MAX) {
+    // UINT16_MAX is an in-memory navigation sentinel for "open previous chapter on
+    // its last page". It should never be treated as persisted resume state.
+    pageNumber = 0;
+  }
+  if (dataSize == 6 || dataSize == 10) {
+    pageCount = data[4] + (data[5] << 8);
+  }
+  return true;
+}
+
 // 0-100 completion percentage for an EPUB's saved reading progress, or -1.0f if path isn't an
 // EPUB or its book.bin cache can't be loaded from disk as-is (buildIfMissing=false -- callers use
 // this only for books that should already have been opened once, e.g. recent/library covers, so
@@ -52,19 +77,10 @@ inline float recentBookProgressPercent(const std::string& path) {
   Epub epub(path, "/.crosspoint");
   if (!epub.load(/*buildIfMissing=*/false, /*skipLoadingCss=*/true)) return -1.0f;
 
-  HalFile f;
-  if (!Storage.openFileForRead("ERS", epub.getCachePath() + "/progress.bin", f)) return -1.0f;
-  uint8_t data[10];
-  const int dataSize = f.read(data, sizeof(data));
-  if (dataSize != 4 && dataSize != 6 && dataSize != 10) return -1.0f;
-
-  const int spineIndex = data[0] + (data[1] << 8);
+  int spineIndex = 0;
+  int pageNumber = 0;
   int pageCount = 0;
-  if (dataSize == 6 || dataSize == 10) {
-    pageCount = data[4] + (data[5] << 8);
-  }
-  int pageNumber = data[2] + (data[3] << 8);
-  if (pageNumber == UINT16_MAX) pageNumber = 0;  // in-memory navigation sentinel, never persisted state
+  if (!loadProgress(epub.getCachePath(), spineIndex, pageNumber, pageCount)) return -1.0f;
 
   const float chapterProgress = pageCount > 0 ? static_cast<float>(pageNumber) / static_cast<float>(pageCount) : 0.0f;
   return epub.calculateProgress(spineIndex, chapterProgress) * 100.0f;
