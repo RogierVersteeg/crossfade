@@ -30,6 +30,7 @@
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
 #include "SdCardFontSystem.h"
+#include "WifiCredentialStore.h"
 #include "activities/Activity.h"
 #include "activities/ActivityManager.h"
 #include "activities/settings/SdFirmwareUpdateActivity.h"
@@ -448,6 +449,7 @@ void setup() {
   // UTC-offset setting on first boot after the update).
   timezones::applyToClock();
   RECENT_BOOKS.loadFromFile();
+  WIFI_STORE.loadFromFile();
   I18N.setLanguage(static_cast<Language>(SETTINGS.language));
   KOREADER_STORE.loadFromFile();
   OPDS_STORE.loadFromFile();
