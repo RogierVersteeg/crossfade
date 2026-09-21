@@ -182,7 +182,9 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   };
 
   // UI Theme
-  enum UI_THEME { CLASSIC = 0, LYRA = 1, LYRA_3_COVERS = 2, ROUNDEDRAFF = 3, COVER_GRID = 4 };
+  // CrossFade: LYRA_CAROUSEL sits before COVER_GRID so that homeThemeValues() can drop the
+  // PSRAM-only Cover Grid entry from the end of the list on devices that can't run it.
+  enum UI_THEME { CLASSIC = 0, LYRA = 1, LYRA_3_COVERS = 2, ROUNDEDRAFF = 3, LYRA_CAROUSEL = 4, COVER_GRID = 5 };
 
   // File browser view: stock file/folder list, a paginated cover grid, or a flat title+author list
   enum FILE_BROWSER_VIEW {
@@ -416,6 +418,13 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint16_t keyboardLayouts = 0;
   // Quick Resume: keep current content visible with moon icon instead of showing a static sleep screen.
   uint8_t quickResumeSleepScreen = QUICK_RESUME_NEVER;
+  // Track per-book/global reading time and pace to derive time-read/time-left estimates (0 = off,
+  // 1 = on). Default off, matching this fork's opt-in philosophy -- see
+  // shouldTrackReadingStats(). Purely millis()-based session accounting, no RTC dependency.
+  // NOTE: nothing writes stats.bin yet -- EpubReaderActivity's session-tracking hooks are a later
+  // batch item (reading stats). Ported now only so LyraCarouselTheme, which reads stats
+  // read-only and gracefully shows nothing when none exist, can compile and degrade correctly.
+  uint8_t trackReadingStats = 0;
 
   static constexpr uint8_t MIN_SLEEP_TIMEOUT_MINUTES = 1;
   static constexpr uint8_t SLEEP_TIMEOUT_NEVER_MINUTES = 31;
@@ -431,6 +440,11 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     return (shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SLEEP) ? 10 : 400;
   }
   int getReaderFontId() const;
+
+  // Gates every reading-stats timing hook and SD write (see EpubReaderActivity's pageTurn()/
+  // onExit()) -- off means no stats struct mutation and no stats.bin/global_stats.bin writes at
+  // all, only a free-standing millis() timestamp nobody reads.
+  bool shouldTrackReadingStats() const { return trackReadingStats != 0; }
 
   // Drop the SD font selection and fall back to the built-in family. The reader
   // point size comes back into BUILTIN_READER_POINT_SIZES with it, since that is

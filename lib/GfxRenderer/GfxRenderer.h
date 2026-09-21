@@ -308,6 +308,13 @@ class GfxRenderer {
   bool drawBitmap(const Bitmap& bitmap, int x, int y, int maxWidth, int maxHeight, float cropX = 0, float cropY = 0,
                   bool whiteAsTransparent = false) const;
   bool drawBitmap1Bit(const Bitmap& bitmap, int x, int y, int maxWidth, int maxHeight) const;
+  // Trapezoid-warped bitmap draw for perspective-skewed side covers (Lyra Carousel): draws
+  // `bitmap` scaled to width `w`, with its left edge height `hL` and right edge height `hR`
+  // (unequal heights produce the skew), vertically centered on max(hL, hR). Ported from CrossInk's
+  // GfxRenderer (same fork lineage) with one adaptation: uses malloc/free per call, matching this
+  // file's own drawBitmap, rather than CrossInk's pooled scratch-buffer allocator, which this fork
+  // doesn't have.
+  void drawPerspectiveBitmap(const Bitmap& bitmap, int x, int y, int w, int hL, int hR) const;
   // Counter-invert content images in the logical framebuffer so output-level
   // dark mode leaves their original polarity unchanged.
   void preserveImagePolarity(int x, int y, int width, int height) const;

@@ -188,8 +188,9 @@ inline std::vector<StrId> buildLongPressMenuValues() {
 }
 
 inline std::vector<StrId> homeThemeValues() {
-  static constexpr StrId VALUES[] = {StrId::STR_THEME_CLASSIC, StrId::STR_THEME_LYRA, StrId::STR_THEME_LYRA_EXTENDED,
-                                     StrId::STR_THEME_ROUNDEDRAFF, StrId::STR_THEME_COVER_GRID};
+  static constexpr StrId VALUES[] = {StrId::STR_THEME_CLASSIC,     StrId::STR_THEME_LYRA,
+                                     StrId::STR_THEME_LYRA_EXTENDED, StrId::STR_THEME_ROUNDEDRAFF,
+                                     StrId::STR_THEME_LYRA_CAROUSEL, StrId::STR_THEME_COVER_GRID};
   const size_t count = UITheme::supportsCoverGrid() ? std::size(VALUES) : std::size(VALUES) - 1;
   return {VALUES, VALUES + count};
 }

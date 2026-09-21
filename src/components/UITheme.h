@@ -37,6 +37,11 @@ class UITheme {
   void reload();
   void setTheme(CrossPointSettings::UI_THEME type);
   static std::string getCoverThumbPath(std::string coverBmpPath, int coverHeight);
+  // Resolves against the same "[HEIGHT]" template slot, but substitutes "WIDTHxHEIGHT" --
+  // matching the filename Epub/Xtc::getThumbBmpPath(width, height) and generateThumbBmp(width,
+  // height) write (see their own comments), so callers that need an exact-box (letterbox
+  // -contained) thumbnail look up the same path those generate.
+  static std::string getCoverThumbPath(std::string coverBmpPath, int width, int height);
   static UIIcon getFileIcon(const std::string& filename);
   static int getStatusBarHeight();
   static int getProgressBarHeight();
