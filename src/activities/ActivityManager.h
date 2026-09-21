@@ -88,6 +88,7 @@ class ActivityManager {
   void goToFileBrowser(std::string path = {});
   void goToLibrary();
   void goToCoverGridBrowser();
+  void goToLibraryList();
   // Auto-triggered library index rebuild: no confirm dialog, starts straight into building, and
   // calls `onDone` on any terminal outcome (success/up-to-date/cancelled/failed) instead of
   // finishing back through the normal activity-result path -- callers that only care about
