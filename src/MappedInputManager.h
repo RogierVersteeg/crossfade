@@ -124,6 +124,16 @@ class MappedInputManager {
   // or when button-only boards opt in, while the screen is currently INVERTED / LANDSCAPE_CCW.
   [[nodiscard]] bool isNavDirectionSwapped() const;
 
+  // The front Left/Right button ROLE's physical shape varies by board: on X3/X4(Pro)'s
+  // InputStyle::XteinkAdcLadder, it's the same pair of buttons as their vertically-oriented
+  // page-turn keys, so "Up"/"Down" hint text matches what's actually printed on the bezel there;
+  // on X4C's InputStyle::DigitalButtons, it's a genuine horizontal bottom pair, distinct from a
+  // separate Up/Down pair used elsewhere (e.g. Lyra Carousel's two-level Home nav) -- "Up"/"Down"
+  // text at that hint position would describe a button that isn't the one physically there.
+  // Screens hinting the Left/Right-role pair for a vertical scroll/page action should pick their
+  // previous/next hint text with this instead of hardcoding STR_DIR_UP/STR_DIR_DOWN.
+  [[nodiscard]] bool frontLeftRightAreHorizontal() const;
+
  private:
   HalGPIO& gpio;
   // Logical-to-physical button mapping depends on what the user is actually looking at: when the

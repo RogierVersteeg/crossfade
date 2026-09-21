@@ -661,8 +661,14 @@ void HomeActivity::render(RenderLock&&) {
       [&menuItems](int index) { return std::string(menuItems[index]); },
       [&menuIcons](int index) { return menuIcons[index]; });
 
-  const auto labels = mappedInput.mapLabels(recentBooks.empty() ? "" : tr(STR_RESUME), tr(STR_SELECT), tr(STR_DIR_UP),
-                                            tr(STR_DIR_DOWN));
+  // See frontLeftRightAreHorizontal()'s comment: on X4C the Left/Right-role buttons hinted here are
+  // a genuine horizontal pair (distinct from Lyra Carousel's own separate Up/Down level-switch
+  // buttons), not the vertically-oriented page-turn keys "Up"/"Down" text describes on X3/X4(Pro).
+  const bool horizontalHint = mappedInput.frontLeftRightAreHorizontal();
+  const auto labels =
+      mappedInput.mapLabels(recentBooks.empty() ? "" : tr(STR_RESUME), tr(STR_SELECT),
+                            horizontalHint ? tr(STR_DIR_LEFT) : tr(STR_DIR_UP),
+                            horizontalHint ? tr(STR_DIR_RIGHT) : tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer(cleanInitialRefresh && !firstRenderDone ? HalDisplay::HALF_REFRESH : HalDisplay::FAST_REFRESH);
