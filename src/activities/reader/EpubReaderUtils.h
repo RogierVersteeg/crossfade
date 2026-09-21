@@ -2,6 +2,7 @@
 
 #include <Epub.h>
 #include <Epub/PageLink.h>
+#include <FsHelpers.h>
 #include <Logging.h>
 
 #include <optional>
@@ -39,6 +40,34 @@ inline bool saveProgress(const Epub& epub, int spineIndex, int pageNumber, int p
   }
   LOG_DBG("ERS", "Progress saved: spine=%d offset=%u page=%d", spineIndex, visibleTextOffset.value_or(0), pageNumber);
   return true;
+}
+
+// 0-100 completion percentage for an EPUB's saved reading progress, or -1.0f if path isn't an
+// EPUB or its book.bin cache can't be loaded from disk as-is (buildIfMissing=false -- callers use
+// this only for books that should already have been opened once, e.g. recent/library covers, so
+// this deliberately doesn't pay for a full rebuild just to decorate a cover).
+inline float recentBookProgressPercent(const std::string& path) {
+  if (!FsHelpers::hasEpubExtension(path)) return -1.0f;
+
+  Epub epub(path, "/.crosspoint");
+  if (!epub.load(/*buildIfMissing=*/false, /*skipLoadingCss=*/true)) return -1.0f;
+
+  HalFile f;
+  if (!Storage.openFileForRead("ERS", epub.getCachePath() + "/progress.bin", f)) return -1.0f;
+  uint8_t data[10];
+  const int dataSize = f.read(data, sizeof(data));
+  if (dataSize != 4 && dataSize != 6 && dataSize != 10) return -1.0f;
+
+  const int spineIndex = data[0] + (data[1] << 8);
+  int pageCount = 0;
+  if (dataSize == 6 || dataSize == 10) {
+    pageCount = data[4] + (data[5] << 8);
+  }
+  int pageNumber = data[2] + (data[3] << 8);
+  if (pageNumber == UINT16_MAX) pageNumber = 0;  // in-memory navigation sentinel, never persisted state
+
+  const float chapterProgress = pageCount > 0 ? static_cast<float>(pageNumber) / static_cast<float>(pageCount) : 0.0f;
+  return epub.calculateProgress(spineIndex, chapterProgress) * 100.0f;
 }
 
 inline const PageLink* linkAtPoint(const std::vector<PageLink>& links, const int x, const int y, const int marginLeft,

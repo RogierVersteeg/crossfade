@@ -293,6 +293,11 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   char dictionaryName[32] = "";
   // Show hidden files/directories (starting with '.') in the file browser (0 = hidden, 1 = show)
   uint8_t showHiddenFiles = 0;
+  // Show a per-book completion indicator (bar or, on Classic, a side line) on Recent Books covers
+  // -- both the Home screen's Continue Reading tile and the Recent Books cover grid (0 = off, 1 =
+  // on). Default on; never shown for Browse Books/Library covers, where unread books would just
+  // be visual noise.
+  uint8_t showCoverProgress = 1;
   // Remove a book from the Recent Books list when its End-of-Book screen is reached (0 = off, 1 = on)
   uint8_t removeReadBooksFromRecents = 0;
   // Move epub to /Read/ folder on SD card when finished (0 = disabled, 1 = enabled)
