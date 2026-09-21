@@ -387,6 +387,10 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t moveFinishedToReadFolder = 0;
   // Short press Back goes to file browser instead of home (0 = disabled, 1 = enabled)
   uint8_t backShortToFileBrowser = 0;
+  // Hide the bottom button-hint labels (0 = shown, 1 = hidden). Mirrors the existing
+  // touch-device behavior (see UITheme::getMetrics()) so screens reclaim the freed space
+  // the same way they already do when a touch panel is present.
+  uint8_t hideButtonHints = 0;
   // Image rendering mode in EPUB reader
   uint8_t imageRendering = IMAGES_DISPLAY;
   // Tilt-based page turning (X3 only — requires QMI8658 IMU)

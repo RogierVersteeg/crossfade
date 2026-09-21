@@ -366,6 +366,8 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
                             "pwrBtnFootnoteBack", StrId::STR_CAT_CONTROLS),
         SettingInfo::Toggle(StrId::STR_BACK_SHORT_TO_FILE_BROWSER, &CrossPointSettings::backShortToFileBrowser,
                             "backShortToFileBrowser", StrId::STR_CAT_CONTROLS),
+        SettingInfo::Toggle(StrId::STR_HIDE_BUTTON_HINTS, &CrossPointSettings::hideButtonHints, "hideButtonHints",
+                            StrId::STR_CAT_CONTROLS),
 
         // --- System ---
         SettingInfo::Value(
