@@ -17,6 +17,8 @@ class BookMetadataCache {
     std::string language;
     std::string coverItemHref;
     std::string textReferenceHref;
+    std::string series;         // empty if the book has no series metadata
+    float seriesIndex = -1.0f;  // -1 = no index given
   };
 
   struct SpineEntry {
@@ -117,6 +119,13 @@ class BookMetadataCache {
 
   // Reading phase (read mode)
   bool load();
+  // Lightweight alternative to load(): populates title/author/cover metadata only,
+  // without a book.bin on disk and without spine/TOC data. Used for library
+  // listings of never-opened books, where a full buildBookBin() would be too
+  // expensive to pay per book. getSpineEntry()/getTocEntry() are unusable
+  // afterward (spineCount/tocCount are left at 0) -- this is not a substitute
+  // for the real cache, only enough for metadata lookups and generateThumbBmp().
+  void setMetadataOnly(const BookMetadata& metadata);
   SpineEntry getSpineEntry(int index);
   TocEntry getTocEntry(int index);
   // Cumulative byte size up to and including the given spine item (0 if out of range

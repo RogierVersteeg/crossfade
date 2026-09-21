@@ -81,6 +81,8 @@ bool Epub::parseContentOpf(BookMetadataCache::BookMetadata& bookMetadata, const 
   bookMetadata.author = opfParser.author;
   bookMetadata.language = opfParser.language;
   bookMetadata.coverItemHref = opfParser.coverItemHref;
+  bookMetadata.series = opfParser.series;
+  bookMetadata.seriesIndex = opfParser.seriesIndex;
 
   // Guide-based cover fallback: if no cover found via metadata/properties,
   // try extracting the image reference from the guide's cover page XHTML
@@ -578,6 +580,23 @@ bool Epub::load(const bool buildIfMissing, const bool skipLoadingCss) {
   return true;
 }
 
+bool Epub::loadMetadataOnly() {
+  if (bookMetadataCache && bookMetadataCache->isLoaded()) {
+    return true;
+  }
+
+  BookMetadataCache::BookMetadata metadata;
+  if (!parseContentOpf(metadata, /*writeSpineEntries=*/false)) {
+    LOG_ERR("EBP", "Could not parse content.opf for metadata-only load");
+    return false;
+  }
+
+  bookMetadataCache.reset(new BookMetadataCache(cachePath));
+  bookMetadataCache->setMetadataOnly(metadata);
+  LOG_DBG("EBP", "Loaded metadata-only ePub: %s", filepath.c_str());
+  return true;
+}
+
 bool Epub::clearCache() const {
   if (!Storage.exists(cachePath.c_str())) {
     LOG_DBG("EPB", "Cache does not exist, no action needed");
@@ -621,6 +640,23 @@ const std::string& Epub::getAuthor() const {
   }
 
   return bookMetadataCache->coreMetadata.author;
+}
+
+const std::string& Epub::getSeries() const {
+  static std::string blank;
+  if (!bookMetadataCache || !bookMetadataCache->isLoaded()) {
+    return blank;
+  }
+
+  return bookMetadataCache->coreMetadata.series;
+}
+
+float Epub::getSeriesIndex() const {
+  if (!bookMetadataCache || !bookMetadataCache->isLoaded()) {
+    return -1.0f;
+  }
+
+  return bookMetadataCache->coreMetadata.seriesIndex;
 }
 
 const std::string& Epub::getLanguage() const {
@@ -728,10 +764,14 @@ bool Epub::generateCoverBmp(bool cropped) const {
 
 std::string Epub::getThumbBmpPath() const { return cachePath + "/thumb_[HEIGHT].bmp"; }
 std::string Epub::getThumbBmpPath(int height) const { return cachePath + "/thumb_" + std::to_string(height) + ".bmp"; }
+std::string Epub::getThumbBmpPath(int width, int height) const {
+  return cachePath + "/thumb_" + std::to_string(width) + "x" + std::to_string(height) + ".bmp";
+}
 
-bool Epub::generateThumbBmp(int height) const {
+bool Epub::generateThumbBmpAtSize(const std::string& outputPath, const int targetWidth, const int targetHeight,
+                                  const bool crop) const {
   // Already generated, return true
-  if (Storage.exists(getThumbBmpPath(height).c_str())) {
+  if (Storage.exists(outputPath.c_str())) {
     return true;
   }
 
@@ -760,15 +800,12 @@ bool Epub::generateThumbBmp(int height) const {
     }
 
     HalFile thumbBmp;
-    if (!Storage.openFileForWrite("EBP", getThumbBmpPath(height), thumbBmp)) {
+    if (!Storage.openFileForWrite("EBP", outputPath, thumbBmp)) {
       return false;
     }
-    // Use smaller target size for Continue Reading card (half of screen: 240x400)
     // Generate 1-bit BMP for fast home screen rendering (no gray passes needed)
-    int THUMB_TARGET_WIDTH = height * 0.6;
-    int THUMB_TARGET_HEIGHT = height;
-    const bool success = JpegToBmpConverter::jpegFileTo1BitBmpStreamWithSize(coverJpg, thumbBmp, THUMB_TARGET_WIDTH,
-                                                                             THUMB_TARGET_HEIGHT);
+    const bool success =
+        JpegToBmpConverter::jpegFileTo1BitBmpStreamWithSize(coverJpg, thumbBmp, targetWidth, targetHeight, crop);
     // Explicitly close() files before calling Storage.remove()
     coverJpg.close();
     thumbBmp.close();
@@ -776,7 +813,7 @@ bool Epub::generateThumbBmp(int height) const {
 
     if (!success) {
       LOG_ERR("EBP", "Failed to generate thumb BMP from JPG cover image");
-      Storage.remove(getThumbBmpPath(height).c_str());
+      Storage.remove(outputPath.c_str());
     }
     LOG_DBG("EBP", "Generated thumb BMP from JPG cover image, success: %s", success ? "yes" : "no");
     return success;
@@ -797,13 +834,11 @@ bool Epub::generateThumbBmp(int height) const {
     }
 
     HalFile thumbBmp;
-    if (!Storage.openFileForWrite("EBP", getThumbBmpPath(height), thumbBmp)) {
+    if (!Storage.openFileForWrite("EBP", outputPath, thumbBmp)) {
       return false;
     }
-    int THUMB_TARGET_WIDTH = height * 0.6;
-    int THUMB_TARGET_HEIGHT = height;
     const bool success =
-        PngToBmpConverter::pngFileTo1BitBmpStreamWithSize(coverPng, thumbBmp, THUMB_TARGET_WIDTH, THUMB_TARGET_HEIGHT);
+        PngToBmpConverter::pngFileTo1BitBmpStreamWithSize(coverPng, thumbBmp, targetWidth, targetHeight, crop);
     // Explicitly close() files before calling Storage.remove()
     coverPng.close();
     thumbBmp.close();
@@ -811,7 +846,7 @@ bool Epub::generateThumbBmp(int height) const {
 
     if (!success) {
       LOG_ERR("EBP", "Failed to generate thumb BMP from PNG cover image");
-      Storage.remove(getThumbBmpPath(height).c_str());
+      Storage.remove(outputPath.c_str());
     }
     LOG_DBG("EBP", "Generated thumb BMP from PNG cover image, success: %s", success ? "yes" : "no");
     return success;
@@ -821,8 +856,20 @@ bool Epub::generateThumbBmp(int height) const {
 
   // Write an empty bmp file to avoid generation attempts in the future
   HalFile thumbBmp;
-  Storage.openFileForWrite("EBP", getThumbBmpPath(height), thumbBmp);
+  Storage.openFileForWrite("EBP", outputPath, thumbBmp);
   return false;
+}
+
+bool Epub::generateThumbBmp(int height) const {
+  // Continue Reading card: fixed 0.6:1 width:height, cover-crop scaled (may
+  // overflow the nominal width -- the caller crops at draw time).
+  const int targetWidth = static_cast<int>(height * 0.6);
+  return generateThumbBmpAtSize(getThumbBmpPath(height), targetWidth, height, /*crop=*/true);
+}
+
+bool Epub::generateThumbBmp(int width, int height) const {
+  // Grid cell: exact letterbox-contained size, never overflows either dimension.
+  return generateThumbBmpAtSize(getThumbBmpPath(width, height), width, height, /*crop=*/false);
 }
 
 uint8_t* Epub::readItemContentsToBytes(const std::string& itemHref, size_t* size, const bool trailingNullByte) const {

@@ -13,7 +13,11 @@ class JpegToBmpConverter {
   static bool jpegFileToBmpStream(HalFile& jpegFile, Print& bmpOut, bool crop = true);
   // Convert with custom target size (for thumbnails)
   static bool jpegFileToBmpStreamWithSize(HalFile& jpegFile, Print& bmpOut, int targetMaxWidth, int targetMaxHeight);
-  // Convert to 1-bit BMP (black and white only, no grays) for fast home screen rendering
+  // Convert to 1-bit BMP (black and white only, no grays) for fast home screen rendering.
+  // crop=true (default): cover-crop scaled, may overflow the nominal target size -- matches every
+  // existing caller's behavior. crop=false: letterbox-contained, so the output BMP's own
+  // dimensions never exceed targetMaxWidth/targetMaxHeight and a caller that draws it at that
+  // exact box size needs no further scaling.
   static bool jpegFileTo1BitBmpStreamWithSize(HalFile& jpegFile, Print& bmpOut, int targetMaxWidth,
-                                              int targetMaxHeight);
+                                              int targetMaxHeight, bool crop = true);
 };

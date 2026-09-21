@@ -168,6 +168,22 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // UI Theme
   enum UI_THEME { CLASSIC = 0, LYRA = 1, LYRA_3_COVERS = 2, ROUNDEDRAFF = 3 };
 
+  // File browser view: stock file/folder list, a paginated cover grid, or a flat title+author list
+  enum FILE_BROWSER_VIEW {
+    FILE_BROWSER_LIST = 0,
+    FILE_BROWSER_COVERS = 1,
+    FILE_BROWSER_TITLES = 2,
+    FILE_BROWSER_VIEW_COUNT
+  };
+
+  // Recent books view: flat list (stock) or a paginated cover grid
+  enum RECENT_BOOKS_VIEW { RECENT_BOOKS_LIST = 0, RECENT_BOOKS_COVERS = 1, RECENT_BOOKS_VIEW_COUNT };
+
+  // Cover grid pagination direction (CoverGridBrowserActivity, shared by Browse Books and Recent
+  // Books): Vertical fills row-major with side Up/Down as the page-turning axis (default/original
+  // behavior); Horizontal fills column-major with front Left/Right as the page-turning axis.
+  enum COVER_GRID_DIRECTION { COVER_GRID_VERTICAL = 0, COVER_GRID_HORIZONTAL = 1, COVER_GRID_DIRECTION_COUNT };
+
   // Image rendering in EPUB reader
   enum IMAGE_RENDERING { IMAGES_DISPLAY = 0, IMAGES_PLACEHOLDER = 1, IMAGES_SUPPRESS = 2, IMAGE_RENDERING_COUNT };
 
@@ -293,6 +309,26 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   char dictionaryName[32] = "";
   // Show hidden files/directories (starting with '.') in the file browser (0 = hidden, 1 = show)
   uint8_t showHiddenFiles = 0;
+  // File browser view: flat list (stock) or a paginated cover grid. Defaults to
+  // list so existing users see no change until they opt in.
+  uint8_t fileBrowserView = FILE_BROWSER_LIST;
+  // Recent books view: flat list (stock) or a paginated cover grid. Defaults to
+  // list so existing users see no change until they opt in.
+  uint8_t recentBooksView = RECENT_BOOKS_LIST;
+  // Collapse books sharing a series into one entry in Browse Books' Covers/Titles views (0 = off,
+  // 1 = on). Does not affect the stock file browser or Recent Books. Default off.
+  uint8_t groupBySeries = 0;
+  // When the last-read book is inside a series, whether Browse Books' two-level last-read
+  // resolution drills straight into that series (1, current/default behavior) or stops at the top
+  // level with the series entry selected but not entered (0). Only meaningful when groupBySeries
+  // is on -- see SettingsActivity::rebuildSettingsLists(), which hides this entry when grouping is
+  // off rather than showing a toggle with nothing to gate. A last-read book that isn't in any
+  // series is unaffected either way -- it's a top-level entry regardless of this setting.
+  uint8_t browseBooksStartInSeries = 1;
+  // Cover grid pagination direction: COVER_GRID_VERTICAL (default) or COVER_GRID_HORIZONTAL --
+  // see the COVER_GRID_DIRECTION enum above. Applies to both Browse Books and Recent Books, since
+  // both use the same CoverGridBrowserActivity navigation code.
+  uint8_t coverGridDirection = COVER_GRID_VERTICAL;
   // Show a per-book completion indicator (bar or, on Classic, a side line) on Recent Books covers
   // -- both the Home screen's Continue Reading tile and the Recent Books cover grid (0 = off, 1 =
   // on). Default on; never shown for Browse Books/Library covers, where unread books would just

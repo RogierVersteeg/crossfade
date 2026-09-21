@@ -14,10 +14,12 @@
 #include "boot_sleep/BootActivity.h"
 #include "boot_sleep/SleepActivity.h"
 #include "browser/OpdsBookBrowserActivity.h"
+#include "home/CoverGridBrowserActivity.h"
 #include "home/CrashActivity.h"
 #include "home/FileBrowserActivity.h"
 #include "home/HomeActivity.h"
 #include "home/RecentBooksActivity.h"
+#include "settings/LibraryIndexRebuildActivity.h"
 #include "network/CrossPointWebServerActivity.h"
 #include "network/UsbDriveActivity.h"
 #include "reader/ReaderActivity.h"
@@ -248,8 +250,22 @@ void ActivityManager::goToFileBrowser(std::string path) {
   replaceActivity(std::make_unique<FileBrowserActivity>(renderer, mappedInput, std::move(path)));
 }
 
+void ActivityManager::goToCoverGridBrowser() {
+  replaceActivity(
+      std::make_unique<CoverGridBrowserActivity>(renderer, mappedInput, CoverGridBrowserActivity::Source::Library));
+}
+
+void ActivityManager::goToLibraryIndexRebuild(std::function<void()> onDone) {
+  replaceActivity(std::make_unique<LibraryIndexRebuildActivity>(renderer, mappedInput, std::move(onDone)));
+}
+
 void ActivityManager::goToRecentBooks() {
   replaceActivity(std::make_unique<RecentBooksActivity>(renderer, mappedInput));
+}
+
+void ActivityManager::goToCoverGridRecentBooks() {
+  replaceActivity(
+      std::make_unique<CoverGridBrowserActivity>(renderer, mappedInput, CoverGridBrowserActivity::Source::RecentBooks));
 }
 
 void ActivityManager::goToBrowser() {
