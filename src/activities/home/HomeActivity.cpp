@@ -473,6 +473,20 @@ void HomeActivity::render(RenderLock&&) {
                             horizontalHint ? tr(STR_DIR_RIGHT) : tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
+  // Lyra Carousel only: redraw the header as the LAST thing before the frame is pushed, so it's
+  // guaranteed correct in what actually reaches the panel regardless of what the tile draw (or its
+  // store/restore cover-buffer snapshot, a raw region memcpy bypassing normal drawing) did earlier
+  // in this same pass. Reported on X4C: after scrolling to a 2-line-wrapped title, a blank bar
+  // covering part of the battery percentage appears at the top and persists across every
+  // subsequent cover (even 1-line ones) until a full refresh. The header IS already redrawn once
+  // above, before the tile -- this is a second, deliberately redundant pass specifically to rule
+  // out anything the tile's own drawing does afterward from being the last word on those rows.
+  // Scoped to Carousel only so every other theme's already-correct rendering is untouched.
+  if (static_cast<CrossPointSettings::UI_THEME>(SETTINGS.uiTheme) == CrossPointSettings::UI_THEME::LYRA_CAROUSEL) {
+    GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.homeTopPadding - metrics.topPadding},
+                   metrics.homeContinueReadingInMenu && !recentBooks.empty() ? recentBooks[0].title.c_str() : nullptr);
+  }
+
   renderer.displayBuffer(cleanInitialRefresh && !firstRenderDone ? HalDisplay::HALF_REFRESH : HalDisplay::FAST_REFRESH);
 
   if (!firstRenderDone) {

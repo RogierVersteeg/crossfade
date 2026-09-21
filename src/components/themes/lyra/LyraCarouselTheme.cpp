@@ -178,11 +178,18 @@ Rect shrinkCenterCoverRect(const Rect& rect) {
 // slightly when the display height is far below the cache-quality ceiling (see the header's
 // kCenterCoverW comment -- currently 0 at this fork's solved size), then kCarouselVerticalLift
 // pulls it back up a bit.
+//
+// titleY must match the title-drawing loop's own starting Y (rect.y + kTitleTopClearance +
+// kTitleDrawOffset) exactly, not just kTitleTopClearance -- CrossInk's original didn't have a
+// separate kTitleDrawOffset (this port added it, see its own comment), and forgetting it here
+// under-reserved the 2-line title block by kTitleDrawOffset's 5px, leaving only a ~3px gap
+// between the actual (offset) title bottom and the cover's top edge -- razor-thin enough for a
+// 2-line title's descenders to clip against the cover's own opaque fill/outline.
 Rect computeCenterCoverSlotRect(const GfxRenderer& renderer, const Rect rect) {
   const int screenW = renderer.getScreenWidth();
   const int titleLineHeight = renderer.getLineHeight(kTitleFontId);
   const int reservedTitleBlockHeight = titleLineHeight * 2;
-  const int titleY = rect.y + kTitleTopClearance;
+  const int titleY = rect.y + kTitleTopClearance + kTitleDrawOffset;
   const int centerTileY = std::max(rect.y + kCoverTopPad, titleY + reservedTitleBlockHeight + kTitleBottomGap);
   const int centerDrawY = centerTileY + kCenterCoverTopInset - kCarouselVerticalLift;
   const int centerX = (screenW - kDisplayCenterW) / 2;
