@@ -18,7 +18,12 @@ class OpdsBookBrowserActivity final : public Activity, private UiAppHost {
  public:
   enum class BrowserState { CHECK_WIFI, WIFI_SELECTION, LOADING, BROWSING, DOWNLOADING, ERROR, SEARCH_INPUT };
 
-  explicit OpdsBookBrowserActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, OpdsServer server);
+  // hasParentActivity: true when pushed onto a caller expecting this to pop back to it (e.g. the
+  // OPDS server picker) rather than reached top-level (e.g. the direct single-server shortcut,
+  // which replaceActivity()'s in with nothing to return to). Controls whether backing out of
+  // catalog root calls finish() or onGoHome() -- see goBackOrHome().
+  explicit OpdsBookBrowserActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, OpdsServer server,
+                                   bool hasParentActivity = false);
 
   void onEnter() override;
   void onExit() override;
@@ -44,6 +49,7 @@ class OpdsBookBrowserActivity final : public Activity, private UiAppHost {
   size_t downloadTotal = 0;
 
   OpdsServer server;  // Copied at construction — safe even if the store changes during browsing
+  const bool hasParentActivity;
 
   // Viewport memory (top/visibleRows) for the browsing list; `selected` is
   // mirrored from selectorIndex at build/move time.
@@ -74,6 +80,9 @@ class OpdsBookBrowserActivity final : public Activity, private UiAppHost {
   void releaseEntries();
   void navigateToEntry(const OpdsEntry& entry);
   void navigateBack();
+  // Backing out of the browser entirely: pops to the caller when there is one (see
+  // hasParentActivity), otherwise falls back to the pre-push behavior of going all the way home.
+  void goBackOrHome();
   void downloadBook(const OpdsEntry& book);
   void launchSearch();
   void performSearch(const std::string& query);
