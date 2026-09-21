@@ -28,6 +28,10 @@ bool MappedInputManager::isNavDirectionSwapped() const {
          (orientation == GfxRenderer::PortraitInverted || orientation == GfxRenderer::LandscapeCounterClockwise);
 }
 
+bool MappedInputManager::frontLeftRightAreHorizontal() const {
+  return BoardConfig::ACTIVE.inputStyle == BoardConfig::InputStyle::DigitalButtons;
+}
+
 MappedInputManager::Button MappedInputManager::mapScreenDirection(const Button button) const {
   // Rows follow GfxRenderer::Orientation's declared order.
   static constexpr Button directions[][4] = {
