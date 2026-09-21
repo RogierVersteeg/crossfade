@@ -21,4 +21,5 @@ class Lyra3CoversTheme : public LyraTheme {
                            const int selectorIndex, bool& coverRendered, bool& coverBufferStored, bool& bufferRestored,
                            std::function<bool()> storeCoverBuffer) const override;
   int homeCoverThumbHeight(const GfxRenderer& renderer) const override;
+                           std::function<bool()> storeCoverBuffer, float progressPercent = -1.0f) const override;
 };
