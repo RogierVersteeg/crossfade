@@ -15,6 +15,7 @@
 #include "boot_sleep/SleepActivity.h"
 #include "browser/OpdsBookBrowserActivity.h"
 #include "home/CoverGridBrowserActivity.h"
+#include "home/LibraryListActivity.h"
 #include "home/CrashActivity.h"
 #include "home/FileBrowserActivity.h"
 #include "home/HomeActivity.h"
@@ -253,6 +254,10 @@ void ActivityManager::goToFileBrowser(std::string path) {
 void ActivityManager::goToCoverGridBrowser() {
   replaceActivity(
       std::make_unique<CoverGridBrowserActivity>(renderer, mappedInput, CoverGridBrowserActivity::Source::Library));
+}
+
+void ActivityManager::goToLibraryList() {
+  replaceActivity(std::make_unique<LibraryListActivity>(renderer, mappedInput));
 }
 
 void ActivityManager::goToLibraryIndexRebuild(std::function<void()> onDone) {
