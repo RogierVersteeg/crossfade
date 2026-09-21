@@ -228,15 +228,63 @@ void HomeActivity::loop() {
     }
   };
 
-  buttonNavigator.onNext([this, menuCount] {
-    selectorIndex = ButtonNavigator::nextIndex(selectorIndex, menuCount);
-    requestUpdate();
-  });
+  const bool isCarouselTheme =
+      static_cast<CrossPointSettings::UI_THEME>(SETTINGS.uiTheme) == CrossPointSettings::UI_THEME::LYRA_CAROUSEL;
 
-  buttonNavigator.onPrevious([this, menuCount] {
-    selectorIndex = ButtonNavigator::previousIndex(selectorIndex, menuCount);
-    requestUpdate();
-  });
+  if (isCarouselTheme) {
+    // Two-level nav, this theme only: Left/Right move within whichever level selectorIndex is
+    // currently in (carousel books, or menu icons); Up/Down -- either one, since there are only
+    // two levels here, so both mean "switch level" -- cross between them, restoring each level's
+    // own last position (lastCarouselIndex/lastMenuIndex) instead of resetting to index 0.
+    // Bypasses NavNext/NavPrevious (which composite side Up/Down with front Left/Right into one
+    // axis -- see MappedInputManager::mapButton) so the two physical pairs can mean different
+    // things here. Back/Confirm are untouched, so Resume/Select on the front-left buttons behave
+    // exactly as before.
+    const int bookCount = static_cast<int>(recentBooks.size());
+    const int menuOnlyCount = menuCount - bookCount;
+
+    buttonNavigator.onPressAndContinuous({MappedInputManager::Button::Right}, [this, bookCount, menuOnlyCount] {
+      if (selectorIndex < bookCount) {
+        selectorIndex = ButtonNavigator::nextIndex(selectorIndex, bookCount);
+      } else {
+        selectorIndex = bookCount + ButtonNavigator::nextIndex(selectorIndex - bookCount, menuOnlyCount);
+      }
+      requestUpdate();
+    });
+
+    buttonNavigator.onPressAndContinuous({MappedInputManager::Button::Left}, [this, bookCount, menuOnlyCount] {
+      if (selectorIndex < bookCount) {
+        selectorIndex = ButtonNavigator::previousIndex(selectorIndex, bookCount);
+      } else {
+        selectorIndex = bookCount + ButtonNavigator::previousIndex(selectorIndex - bookCount, menuOnlyCount);
+      }
+      requestUpdate();
+    });
+
+    const auto switchLevel = [this, bookCount, menuOnlyCount] {
+      if (selectorIndex < bookCount) {
+        if (menuOnlyCount <= 0) return;
+        lastCarouselIndex = selectorIndex;
+        selectorIndex = bookCount + std::clamp(lastMenuIndex, 0, menuOnlyCount - 1);
+      } else {
+        if (bookCount <= 0) return;
+        lastMenuIndex = selectorIndex - bookCount;
+        selectorIndex = std::clamp(lastCarouselIndex, 0, bookCount - 1);
+      }
+      requestUpdate();
+    };
+    buttonNavigator.onPress({MappedInputManager::Button::Up, MappedInputManager::Button::Down}, switchLevel);
+  } else {
+    buttonNavigator.onNext([this, menuCount] {
+      selectorIndex = ButtonNavigator::nextIndex(selectorIndex, menuCount);
+      requestUpdate();
+    });
+
+    buttonNavigator.onPrevious([this, menuCount] {
+      selectorIndex = ButtonNavigator::previousIndex(selectorIndex, menuCount);
+      requestUpdate();
+    });
+  }
 
   const auto swipe = mappedInput.wasSwipe();
   if (swipe == MappedInputManager::SwipeDir::Up) {
