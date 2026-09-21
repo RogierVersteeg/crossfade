@@ -14,6 +14,11 @@ class HomeActivity final : public Activity {
   std::unique_ptr<CoverGridHomeUi> coverGridUi;
   ButtonNavigator buttonNavigator;
   int selectorIndex = 0;
+  // Lyra Carousel's two-level nav only: each level's own last position, restored when Up/Down
+  // switches back into it instead of resetting to index 0. Indices are level-local (0-based
+  // within that level), not selectorIndex's flat numbering.
+  int lastCarouselIndex = 0;
+  int lastMenuIndex = 0;
   bool recentsLoading = false;
   bool recentsLoaded = false;
   bool firstRenderDone = false;
