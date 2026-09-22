@@ -24,6 +24,8 @@ using CoverGridGeometry::SERIES_STRIP_WIDTH;
 // Matches ButtonNavigator's own continuous-hold repeat interval -- a familiar
 // "still working" cadence -- rather than refreshing the panel once per cell.
 constexpr uint32_t PROGRESS_UPDATE_INTERVAL_MS = 500;
+// Hold threshold for the context-menu long-press gesture (matches RecentBooksActivity's own).
+constexpr unsigned long LONG_PRESS_MS = 1000;
 
 // Mirrors GfxRenderer::drawBitmap1Bit's own fit-within-box scale calculation
 // (shrink-only, bound by whichever dimension needs it more) so the caller can
@@ -364,10 +366,16 @@ void CoverGridBrowserActivity::loop() {
   }
 
   // Long-press Confirm opens the per-book context menu; short-press (below, on release) opens the
-  // reader or drills into a series as usual. update() must run every tick regardless of selection
-  // validity -- it also owns swallowing the eventual release so it doesn't also fall through to
-  // the short-press handler -- so the fire check is a single call, not a guard.
-  if (longPressAction.update(mappedInput, Button::Confirm)) {
+  // reader or drills into a series as usual. wasLongPressed() fires once and, critically,
+  // suppresses the eventual release via MappedInputManager::suppressNextRelease() --
+  // ActivityManager::loop() consumes that release before ANY activity's loop() runs (see
+  // consumeSuppressedRelease()), so it can't leak through as a spurious Confirm-release on
+  // whatever activity is active when the physical release finally happens (this one, or -- after
+  // openContextMenu() below switches activities -- BookContextMenuActivity's own option popup,
+  // which would otherwise read it as "confirm the default-selected menu item" the instant the
+  // long-press that opened the menu is released). A hand-rolled isPressed/getHeldTime tracker
+  // (this file used to use one) can't reach across that activity switch to suppress anything.
+  if (mappedInput.wasLongPressed(Button::Confirm, LONG_PRESS_MS)) {
     const auto& entries = currentEntries();
     if (selectedIndex >= 0 && selectedIndex < static_cast<int>(entries.size()) && !entries[selectedIndex].isSeries) {
       openContextMenu(entries[selectedIndex]);

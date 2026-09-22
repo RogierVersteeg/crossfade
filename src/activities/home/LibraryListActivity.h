@@ -5,7 +5,6 @@
 
 #include "activities/UiListActivity.h"
 #include "util/LibraryGrouping.h"
-#include "util/LongPressAction.h"
 
 // Third fileBrowserView option alongside the stock FileBrowserActivity (Files) and
 // CoverGridBrowserActivity (Covers): a flat, paginated title+author list over the whole library,
@@ -37,8 +36,6 @@ class LibraryListActivity final : public UiListActivity {
   void onBackButton() override;
   void drawChrome() override;
   void drawFooter() override;
-
-  LongPressAction longPressAction;
 
   std::vector<LibraryGrouping::Entry> topLevelEntries;
   // >= 0 while viewing a series page: the index into topLevelEntries of the series being viewed.
