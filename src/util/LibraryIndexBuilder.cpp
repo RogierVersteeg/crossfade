@@ -27,6 +27,30 @@ bool hasCachedCoverAtSize(const std::string& path, const int coverWidth, const i
   }
   return true;
 }
+
+// A book whose cover generation genuinely fails (decode error, or -- the case that matters most
+// here -- insufficient heap on a PSRAM-less C3) leaves no thumbnail file behind, so
+// hasCachedCoverAtSize() finds it "missing" again on every future visit and begin() queues it for
+// stepCover() again, forever: a real parse-and-decode attempt repeated on every single Covers-grid
+// entry for as long as the device stays on. This process-lifetime (not persisted -- no on-disk
+// format/version change, so no extra rebuild cost) set remembers which paths already failed once
+// this boot, so later begin() calls stop re-queuing them. Cleared naturally by a reboot, which is
+// also the only thing that would change WHY a decode failed (more free heap, a different SD
+// state), so a retry after one is reasonable. Capped well above any real "regularly failing"
+// count so a pathological library can't turn this into its own unbounded allocation.
+constexpr size_t MAX_TRACKED_COVER_FAILURES = 64;
+std::vector<std::string> knownFailedCoverPaths;
+
+bool wasCoverGenerationKnownFailed(const std::string& path) {
+  return std::find(knownFailedCoverPaths.begin(), knownFailedCoverPaths.end(), path) != knownFailedCoverPaths.end();
+}
+
+void markCoverGenerationFailed(const std::string& path) {
+  if (wasCoverGenerationKnownFailed(path) || knownFailedCoverPaths.size() >= MAX_TRACKED_COVER_FAILURES) {
+    return;
+  }
+  knownFailedCoverPaths.push_back(path);
+}
 }  // namespace
 
 void LibraryIndexBuilder::begin(const int coverWidth, const int coverHeight) {
@@ -66,7 +90,11 @@ void LibraryIndexBuilder::begin(const int coverWidth, const int coverHeight) {
       carriedOver.push_back(**it);
       // Unchanged metadata never goes through step(), so a missing-cover check has to happen
       // here instead -- cheap (a stat, no parse) for the common case where it's already cached.
-      if (coverWidth > 0 && coverHeight > 0 && !hasCachedCoverAtSize(scannedEntry.path, coverWidth, coverHeight)) {
+      // Skip entries already known to fail generation this boot (see
+      // wasCoverGenerationKnownFailed's comment) -- queuing them again would just repeat the same
+      // failed parse-and-decode attempt on every single visit.
+      if (coverWidth > 0 && coverHeight > 0 && !hasCachedCoverAtSize(scannedEntry.path, coverWidth, coverHeight) &&
+          !wasCoverGenerationKnownFailed(scannedEntry.path)) {
         coverBackfill.push_back(carriedOver.size() - 1);
       }
     } else {
@@ -94,6 +122,13 @@ bool LibraryIndexBuilder::step() {
   // metadata -- coverWidth/coverHeight are 0 (BookMetadataResolver::resolve()'s default, meaning
   // "skip cover work") unless begin() was given a real size.
   const BookMetadataResolver::Result result = BookMetadataResolver::resolve(scannedEntry.path, coverWidth, coverHeight);
+  // Generation was attempted but left no cached file behind (see wasCoverGenerationKnownFailed's
+  // comment) -- this book will look "carried over, missing a cover" on every future begin() from
+  // here on, so remember it now rather than paying for one more failed stepCover() attempt before
+  // begin() would otherwise notice.
+  if (result.coverGenerated && !result.hasCover) {
+    markCoverGenerationFailed(scannedEntry.path);
+  }
 
   LibraryIndex::Entry entry;
   entry.path = scannedEntry.path;
@@ -119,7 +154,12 @@ bool LibraryIndexBuilder::stepCover() {
   // it exists only to generate the thumbnail found missing in begin(). Reaching the cover still
   // requires opening/parsing the book (the cover href comes from the same metadata), so this pays
   // a real parse cost, but only for the entries begin() actually flagged as missing a cover.
-  BookMetadataResolver::resolve(entry.path, coverWidth, coverHeight);
+  const BookMetadataResolver::Result result = BookMetadataResolver::resolve(entry.path, coverWidth, coverHeight);
+  // See wasCoverGenerationKnownFailed's comment: a failed attempt here would otherwise repeat,
+  // unchanged, on every single future visit to this grid for the rest of this boot.
+  if (result.coverGenerated && !result.hasCover) {
+    markCoverGenerationFailed(entry.path);
+  }
 
   nextCoverBackfillIndex++;
   return hasCoverWork();
