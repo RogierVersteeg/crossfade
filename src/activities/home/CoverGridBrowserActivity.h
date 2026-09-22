@@ -6,7 +6,6 @@
 #include "activities/Activity.h"
 #include "util/ButtonNavigator.h"
 #include "util/LibraryGrouping.h"
-#include "util/LongPressAction.h"
 
 // Alternative to FileBrowserActivity AND RecentBooksActivity: a paginated grid
 // of cover thumbnails, either the whole SD card (SETTINGS.fileBrowserView) or
@@ -39,7 +38,6 @@ class CoverGridBrowserActivity final : public Activity {
   // interfere with the other's.
   ButtonNavigator primaryNavigator;
   ButtonNavigator secondaryNavigator;
-  LongPressAction longPressAction;
 
   const Source source;
   std::vector<LibraryGrouping::Entry> topLevelEntries;

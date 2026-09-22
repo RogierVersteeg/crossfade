@@ -19,13 +19,12 @@
 namespace fui = freeink::ui;
 
 namespace {
-// Physical-button hold threshold for the context-menu gesture (matches RecentBooksActivity's
-// inline equivalent and CoverGridBrowserActivity's LongPressAction).
+// Hold threshold for the context-menu long-press gesture (matches RecentBooksActivity's own).
 constexpr unsigned long LONG_PRESS_MS = 1000;
 }  // namespace
 
 LibraryListActivity::LibraryListActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
-    : UiListActivity("LibraryList", renderer, mappedInput, /*wantsTouchLongPress=*/true), longPressAction(LONG_PRESS_MS) {}
+    : UiListActivity("LibraryList", renderer, mappedInput, /*wantsTouchLongPress=*/true) {}
 
 std::vector<LibraryGrouping::Entry>& LibraryListActivity::currentEntries() {
   if (seriesTopIndex >= 0 && seriesTopIndex < static_cast<int>(topLevelEntries.size())) {
@@ -249,10 +248,13 @@ void LibraryListActivity::onExit() {
 
 bool LibraryListActivity::handleCustomInput() {
   // Long-press Confirm opens the per-book context menu; short-press (handled by the base's
-  // handleButtons()) activates/drills in. update() must run every tick regardless of selection
-  // validity -- it also owns swallowing the eventual release so it doesn't also fall through to
-  // the base's short-press handler.
-  if (longPressAction.update(mappedInput, MappedInputManager::Button::Confirm)) {
+  // handleButtons()) activates/drills in. wasLongPressed() fires once and suppresses the eventual
+  // release via MappedInputManager::suppressNextRelease() -- ActivityManager::loop() consumes that
+  // release before any activity's loop() runs, so it can't leak through as a spurious
+  // Confirm-release on BookContextMenuActivity's option popup once openContextMenu() below
+  // switches activities (which would otherwise read it as "confirm the default-selected item" the
+  // instant the long-press that opened the menu is released).
+  if (mappedInput.wasLongPressed(MappedInputManager::Button::Confirm, LONG_PRESS_MS)) {
     const auto& entries = currentEntries();
     const int selected = nav.selected;
     if (selected >= 0 && selected < static_cast<int>(entries.size()) && !entries[selected].isSeries) {
