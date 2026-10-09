@@ -62,7 +62,35 @@ Optional — **Settings → Display → Group by Series**. Books that share a se
 
 ### Per-book context menu
 
-Long-press **Confirm** on a book (in Covers or Titles) opens a context menu with per-book actions, including **Mark as finished**. (The *Pin to Home* entry from the original CrossFade main branch is not ported to the 1.6.5 Home screen yet, so it is hidden here.)
+Long-press **Confirm** on a book (in Covers or Titles) opens a context menu with per-book actions, including **Mark as finished** and, when the setting below is on, **Pin to Home**. *Mark as finished* is also available from the reader menu.
+
+### Pin a book to Home
+
+Optional — **Settings → System → Pin Book to Home**. Long-press **Confirm** on any book and choose **Pin to Home** to give it its own permanent Home-screen entry, independent of Recent Books — useful for a book you return to daily. Selecting it resumes at its saved position. The entry only appears when there's genuinely enough room for it on screen for your theme; otherwise it stays hidden rather than crowding out other rows. (Not shown on the PSRAM-only Cover Grid home theme, which has its own fixed layout.)
+
+### Transfer & Sync
+
+OPDS Browser and File Transfer are combined into a single **Transfer & Sync** Home entry. With no OPDS servers configured it goes straight to File Transfer; with servers configured it opens a small picker between the two.
+
+### Automatic KOReader Sync
+
+Optional — **Settings → KOReader Sync → Auto-Sync on Sleep/Open** (on by default once KOReader Sync is configured). Pushes your progress automatically when you sleep from the reader, and pulls the furthest progress between device and server when you open a book from Home, the library or the file browser — never moving your position backward. Both directions are silent, bounded to a few seconds, abortable by a button press, and skipped entirely with no saved network. They use the same furthest-wins comparison as CrossPoint's manual smart sync, including the CrossPoint sync server's precise positions.
+
+### Custom device name
+
+**Settings → System → Device Name** sets the name used anywhere the device identifies itself (currently the device field sent to a KOReader Sync server) instead of the hardware default (CrossFade X3 / X4 / X4 Pro).
+
+### Reading Stats
+
+Optional — **Settings → System → Track Reading Stats** (off by default). Tracks per-book and all-books reading time, forward-page pace, and an estimated time-left for the book you're in. Turning it on adds a **Reading Stats** entry to the reader menu's Main tab and shows a time-read/time-left label under each cover's progress bar on the Lyra Carousel.
+
+### Reader menu tabs
+
+The in-book reader menu is tabbed — **Main**, **Bookmarks** and **Text** — on the same tab-bar-and-list navigation as Settings. Confirm on the tab bar, a continuous hold of the navigation buttons, or a tap on a tab switches tabs. Bookmark actions live on their own tab; text settings on theirs.
+
+### Sleep screen
+
+The sleep screen keeps the original **CrossPoint** logo and name; only the boot screen and UI carry the CrossFade name.
 
 ### Hide button hints
 
