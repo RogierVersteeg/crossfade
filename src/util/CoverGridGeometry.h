@@ -37,6 +37,6 @@ struct Geometry {
   int gridTop = 0;
 };
 
-Geometry compute(GfxRenderer& renderer);
+Geometry compute(const GfxRenderer& renderer);
 
 }  // namespace CoverGridGeometry

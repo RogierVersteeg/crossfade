@@ -3,6 +3,9 @@
 #include <HalStorage.h>
 #include <I18n.h>
 
+#include <algorithm>
+#include <iterator>
+
 #include "FinishedBooksStore.h"
 #include "PinnedBookStore.h"
 #include "RecentBooksStore.h"
@@ -38,9 +41,8 @@ void BookContextMenuActivity::onEnter() {
 
   std::vector<const char*> labels;
   labels.reserve(menuItems.size());
-  for (const auto& item : menuItems) {
-    labels.push_back(I18N.get(item.labelId));
-  }
+  std::transform(menuItems.begin(), menuItems.end(), std::back_inserter(labels),
+                 [](const auto& item) { return I18N.get(item.labelId); });
   optionPopup.show(title.c_str(), labels.data(), static_cast<int>(labels.size()), 0,
                    [this](const int index) { selectAction(index); });
   requestUpdate();

@@ -509,7 +509,6 @@ void HomeActivity::loop() {
     int tx = 0;
     int ty = 0;
     if (mappedInput.wasScreenTapped(tx, ty)) {
-      const auto& metrics = UITheme::getInstance().getMetrics();
       const int book = LyraCarouselTheme::hitTestCover(
           renderer, Rect{0, metrics.homeTopPadding, renderer.getScreenWidth(), metrics.homeCoverTileHeight}, bookCount,
           center, tx, ty);

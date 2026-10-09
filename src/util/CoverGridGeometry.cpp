@@ -16,7 +16,7 @@ constexpr int TARGET_CELL_WIDTH = 140;
 constexpr int TARGET_CELL_HEIGHT = 190;
 }  // namespace
 
-Geometry compute(GfxRenderer& renderer) {
+Geometry compute(const GfxRenderer& renderer) {
   Geometry g;
 
   const auto& metrics = UITheme::getInstance().getMetrics();
