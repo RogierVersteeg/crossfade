@@ -108,6 +108,12 @@ class LyraCarouselTheme : public LyraTheme {
   // check reduce to "does the (now correctly sized) cover tile itself fit," which is the only
   // real constraint here.
   int getMenuBottomEdge(const GfxRenderer& renderer, int menuTop, int itemCount) const override;
+  // Touch hit-testing for HomeActivity on touch boards (X4 Pro), mirroring drawRecentBookCover's
+  // and drawButtonMenu's geometry: the recent-book index a tap at (x, y) lands on given the
+  // currently centered book (center or either near side cover), or -1; and the icon-menu tile
+  // index under a tap, or -1.
+  static int hitTestCover(const GfxRenderer& renderer, Rect rect, int bookCount, int centerIdx, int x, int y);
+  static int hitTestMenuTile(const GfxRenderer& renderer, int buttonCount, int x, int y);
 
  private:
   // Remembers the last-centered book so the carousel doesn't reset to book 0 while the icon-menu

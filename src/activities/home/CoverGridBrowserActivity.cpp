@@ -451,6 +451,32 @@ void CoverGridBrowserActivity::loop() {
     return;
   }
 
+  // Touch boards (X4 Pro) have neither the side Up/Down pair nor a Confirm button to long-press:
+  // swipe to turn pages (vertical or horizontal, whichever feels natural) and hold a cover to open
+  // its context menu. Back is already folded in (header back button / left-edge swipe).
+  const auto swipe = mappedInput.wasSwipe();
+  if (swipe == MappedInputManager::SwipeDir::Up || swipe == MappedInputManager::SwipeDir::Left) {
+    selectedIndex = ButtonNavigator::nextPageIndex(selectedIndex, total, itemsPerPage);
+    requestUpdate();
+    return;
+  }
+  if (swipe == MappedInputManager::SwipeDir::Down || swipe == MappedInputManager::SwipeDir::Right) {
+    selectedIndex = ButtonNavigator::previousPageIndex(selectedIndex, total, itemsPerPage);
+    requestUpdate();
+    return;
+  }
+  int lx = 0;
+  int ly = 0;
+  if (mappedInput.wasScreenLongPress(lx, ly)) {
+    const int hit = hitTestCell(lx, ly);
+    const auto& entries = currentEntries();
+    if (hit >= 0 && hit < static_cast<int>(entries.size()) && !entries[hit].isSeries) {
+      selectedIndex = hit;
+      openContextMenu(entries[hit]);
+    }
+    return;
+  }
+
   int tx = 0;
   int ty = 0;
   if (mappedInput.wasScreenTouchDown(tx, ty)) {

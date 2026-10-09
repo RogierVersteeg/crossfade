@@ -103,7 +103,9 @@ constexpr int kCenterOutlineW = 4;  // white ring around the center cover
 constexpr int kMenuIconSize = 32;
 constexpr int kMenuIconPad = 14;
 constexpr int kHighlightPad = 7;
-constexpr int kButtonHintsH = LyraCarouselMetrics::values.buttonHintsHeight;
+// Runtime, not the compile-time metrics table: UITheme zeroes buttonHintsHeight on touch boards
+// (X4 Pro) and when Hide Button Hints is on, and the icon menu must follow the real bottom edge.
+int buttonHintsH() { return UITheme::getInstance().getMetrics().buttonHintsHeight; }
 
 // Same fixed set LyraTheme.cpp's own (private, size-keyed) iconForName keeps for its 32px menu
 // row -- Home's button menu only ever shows Folder/Recent/Transfer/Settings/Pin, so this is
@@ -161,7 +163,7 @@ struct MenuLayoutMetrics {
 MenuLayoutMetrics computeMenuLayout(const GfxRenderer& renderer, const int buttonCount) {
   const int tileH = kMenuIconPad + kMenuIconSize + kMenuIconPad;
   const int labelLineHeight = renderer.getLineHeight(kMenuLabelFontId);
-  const int rowY = renderer.getScreenHeight() - kButtonHintsH - tileH - kMenuLabelTopGap - labelLineHeight -
+  const int rowY = renderer.getScreenHeight() - buttonHintsH() - tileH - kMenuLabelTopGap - labelLineHeight -
                    kMenuLabelBottomGap + kMenuRowDrop;
   return {tileH, renderer.getScreenWidth() / std::max(1, buttonCount), labelLineHeight, rowY,
           rowY - kMenuLabelTopGap - labelLineHeight};
@@ -524,4 +526,30 @@ int LyraCarouselTheme::getMenuBottomEdge(const GfxRenderer&, const int menuTop, 
   // to add here -- returning menuTop makes HomeActivity::onEnter()'s pinned-row fit-check reduce to
   // "does the cover tile fit," the only real constraint for this theme.
   return menuTop;
+}
+
+int LyraCarouselTheme::hitTestCover(const GfxRenderer& renderer, const Rect rect, const int bookCount,
+                                    const int centerIdx, const int x, const int y) {
+  if (bookCount <= 0 || centerIdx < 0 || centerIdx >= bookCount) return -1;
+  // Same geometry drawRecentBookCover lays out (center slot, near side trapezoids).
+  const Rect slot = computeCenterCoverSlotRect(renderer, rect);
+  if (x >= slot.x && x < slot.x + slot.width && y >= slot.y && y < slot.y + slot.height) return centerIdx;
+  const int sideMaxHeight = std::max(kNearSideInnerH, kNearSideOuterH);
+  const int sideTileY = slot.y + (kDisplayCenterH - sideMaxHeight) / 2;
+  if (y < sideTileY || y >= sideTileY + sideMaxHeight) return -1;
+  constexpr int kNearOverlap = 4;
+  constexpr int kNearCoverInset = 10;
+  const int leftNearX = slot.x - kNearSideW + kNearOverlap + kNearCoverInset;
+  const int rightNearX = slot.x + kDisplayCenterW - kNearOverlap - kNearCoverInset;
+  if (bookCount >= 2 && x >= leftNearX && x < leftNearX + kNearSideW) return (centerIdx + bookCount - 1) % bookCount;
+  if (bookCount >= 3 && x >= rightNearX && x < rightNearX + kNearSideW) return (centerIdx + 1) % bookCount;
+  return -1;
+}
+
+int LyraCarouselTheme::hitTestMenuTile(const GfxRenderer& renderer, const int buttonCount, const int x, const int y) {
+  if (buttonCount <= 0) return -1;
+  const MenuLayoutMetrics m = computeMenuLayout(renderer, buttonCount);
+  if (y < m.rowY || y >= m.rowY + m.tileH || x < 0) return -1;
+  const int tile = x / m.tileW;
+  return tile < buttonCount ? tile : -1;
 }

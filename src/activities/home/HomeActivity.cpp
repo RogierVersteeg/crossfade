@@ -486,6 +486,56 @@ void HomeActivity::loop() {
     return;
   }
 
+  if (isCarouselTheme) {
+    // Touch boards (X4 Pro): the carousel's covers and icon tiles sit nowhere near the
+    // metrics-driven rows the generic touch mapping below assumes, so hit-test the theme's own
+    // geometry instead. Left/Right swipes walk the carousel; a tap on a side cover centers it, a
+    // tap on the centered cover opens it, and a tap on an icon tile activates that menu entry.
+    const int bookCount = static_cast<int>(recentBooks.size());
+    const int menuOnlyCount = menuCount - bookCount;
+    const int center = bookCount == 0 ? -1
+                       : (selectorIndex < bookCount ? selectorIndex : std::clamp(lastCarouselIndex, 0, bookCount - 1));
+    const auto carouselSwipe = mappedInput.wasSwipe();
+    if (center >= 0 &&
+        (carouselSwipe == MappedInputManager::SwipeDir::Left || carouselSwipe == MappedInputManager::SwipeDir::Right)) {
+      selectorIndex = carouselSwipe == MappedInputManager::SwipeDir::Left
+                          ? ButtonNavigator::nextIndex(center, bookCount)
+                          : ButtonNavigator::previousIndex(center, bookCount);
+      lastCarouselIndex = selectorIndex;
+      requestUpdate();
+      return;
+    }
+    int tx = 0;
+    int ty = 0;
+    if (mappedInput.wasScreenTapped(tx, ty)) {
+      const auto& metrics = UITheme::getInstance().getMetrics();
+      const int book = LyraCarouselTheme::hitTestCover(
+          renderer, Rect{0, metrics.homeTopPadding, renderer.getScreenWidth(), metrics.homeCoverTileHeight}, bookCount,
+          center, tx, ty);
+      if (book >= 0) {
+        if (book == center) {
+          selectorIndex = book;
+          activateSelection();
+        } else {
+          lastCarouselIndex = book;
+          selectorIndex = book;
+          requestUpdate();
+        }
+        return;
+      }
+      const int tile = LyraCarouselTheme::hitTestMenuTile(renderer, menuOnlyCount, tx, ty);
+      if (tile >= 0) {
+        selectorIndex = bookCount + tile;
+        activateSelection();
+        return;
+      }
+    }
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+      activateSelection();
+    }
+    return;
+  }
+
   if (coverGridUi) {
     const int touched = coverGridUi->selectedAction(mappedInput);
     if (touched >= 0 && touched < menuCount) {
