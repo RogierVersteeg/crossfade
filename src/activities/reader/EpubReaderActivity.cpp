@@ -20,6 +20,7 @@
 #include <limits>
 
 #include "../../util/BookmarkFile.h"
+#include "BookStatsActivity.h"
 #include "BookmarkEntry.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
@@ -305,9 +306,10 @@ void EpubReaderActivity::openReaderMenu() {
   const int bookProgressPercent = bookPercentFor(position);
 
   startActivityForResult(
-      std::make_unique<EpubReaderMenuActivity>(renderer, mappedInput, epub->getTitle(), position.displayPage(),
-                                               position.totalPages, bookProgressPercent, SETTINGS.orientation,
-                                               !currentPageFootnotes.empty(), !cachedBookmarks.empty()),
+      std::make_unique<EpubReaderMenuActivity>(
+          renderer, mappedInput, epub->getTitle(), position.displayPage(), position.totalPages, bookProgressPercent,
+          SETTINGS.orientation, !currentPageFootnotes.empty(), !cachedBookmarks.empty(),
+          FINISHED_BOOKS.isFinished(epub->getPath()), SETTINGS.shouldTrackReadingStats()),
       [this](const ActivityResult& result) {
         const auto& menu = std::get<MenuResult>(result.data);
 
@@ -957,6 +959,20 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
     }
     case EpubReaderMenuActivity::MenuAction::SYNC: {
       launchKOReaderSync();
+      break;
+    }
+    case EpubReaderMenuActivity::MenuAction::TOGGLE_FINISHED: {
+      // CrossFade: manual finished flag, same store the book context menu uses.
+      const std::string path = epub->getPath();
+      FINISHED_BOOKS.setFinished(path, !FINISHED_BOOKS.isFinished(path));
+      requestUpdate();
+      break;
+    }
+    case EpubReaderMenuActivity::MenuAction::READING_STATS: {
+      // CrossFade: refresh the time-left estimate off the current session's pace before showing it.
+      refreshEstimatedTimeLeft();
+      startActivityForResult(std::make_unique<BookStatsActivity>(renderer, mappedInput, stats),
+                             [this](const ActivityResult&) { requestUpdate(); });
       break;
     }
     case EpubReaderMenuActivity::MenuAction::BOOKMARKS: {
@@ -2528,7 +2544,9 @@ void EpubReaderActivity::applyReaderTextSettings() {
 // two entries that have their own tool (chapters -> Contents, text -> Text).
 void EpubReaderActivity::buildMoreActions() {
   using MA = EpubReaderMenuActivity::MenuAction;
-  EpubReaderMenuActivity::buildMenuItems(moreItems, !currentPageFootnotes.empty(), !cachedBookmarks.empty());
+  EpubReaderMenuActivity::buildFlatMenuItems(moreItems, !currentPageFootnotes.empty(), !cachedBookmarks.empty(),
+                                             epub ? FINISHED_BOOKS.isFinished(epub->getPath()) : false,
+                                             SETTINGS.shouldTrackReadingStats());
   moreItems.erase(std::remove_if(moreItems.begin(), moreItems.end(),
                                  [](const auto& item) {
                                    return item.action == MA::SELECT_CHAPTER || item.action == MA::TEXT_SETTINGS;

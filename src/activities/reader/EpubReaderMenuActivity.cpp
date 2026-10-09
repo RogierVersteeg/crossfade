@@ -11,57 +11,129 @@
 
 namespace fui = freeink::ui;
 
+namespace {
+constexpr StrId TAB_NAME_IDS[] = {StrId::STR_READER_TAB_MAIN, StrId::STR_BOOKMARKS, StrId::STR_TEXT_SETTINGS};
+}  // namespace
+
 EpubReaderMenuActivity::EpubReaderMenuActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                                const std::string& title, const int currentPage, const int totalPages,
                                                const int bookProgressPercent, const uint8_t currentOrientation,
-                                               const bool hasFootnotes, const bool hasBookmarks)
-    : UiListActivity("EpubReaderMenu", renderer, mappedInput),
+                                               const bool hasFootnotes, const bool hasBookmarks, const bool isFinished,
+                                               const bool statsEnabled)
+    : UiTabListActivity("EpubReaderMenu", renderer, mappedInput),
+      menuItems(buildMenuItems(hasFootnotes, hasBookmarks, isFinished, statsEnabled)),
       title(title),
       pendingOrientation(currentOrientation),
       currentPage(currentPage),
       totalPages(totalPages),
-      bookProgressPercent(bookProgressPercent) {
-  buildMenuItems(menuItems, hasFootnotes, hasBookmarks);
-  buildMenuRowItems();
-}
+      bookProgressPercent(bookProgressPercent) {}
 
-// Populates menuRowItems's labels/actionValue from menuItems. Called once
-// here since menuItems (and thus which rows exist) never changes after
-// construction; buildScreen() only touches the two rows with a live value.
-void EpubReaderMenuActivity::buildMenuRowItems() {
-  for (size_t i = 0; i < menuItems.size() && i < MAX_MENU_ITEMS; i++) {
-    fui::ListItem item;
-    item.label = I18N.get(menuItems[i].labelId);
-    item.actionValue = static_cast<int16_t>(i);
-    menuRowItems[i] = item;
-  }
-}
+EpubReaderMenuActivity::TabMenuItems EpubReaderMenuActivity::buildMenuItems(const bool hasFootnotes,
+                                                                            const bool hasBookmarks,
+                                                                            const bool isFinished,
+                                                                            const bool statsEnabled) {
+  TabMenuItems items;
+  auto& mainItems = items[static_cast<size_t>(Tab::Main)];
+  auto& bookmarkItems = items[static_cast<size_t>(Tab::Bookmarks)];
+  auto& textItems = items[static_cast<size_t>(Tab::Text)];
+  mainItems.reserve(16);
+  bookmarkItems.reserve(2);
 
-void EpubReaderMenuActivity::buildMenuItems(std::vector<MenuItem>& items, bool hasFootnotes, bool hasBookmarks) {
-  items.clear();
-  items.reserve(MAX_MENU_ITEMS);
-  items.push_back({MenuAction::SELECT_CHAPTER, StrId::STR_SELECT_CHAPTER});
+  mainItems.push_back({MenuAction::SELECT_CHAPTER, StrId::STR_SELECT_CHAPTER});
   if (hasFootnotes) {
-    items.push_back({MenuAction::FOOTNOTES, StrId::STR_FOOTNOTES});
+    mainItems.push_back({MenuAction::FOOTNOTES, StrId::STR_FOOTNOTES});
   }
-  if (hasBookmarks) {
-    items.push_back({MenuAction::BOOKMARKS, StrId::STR_BOOKMARKS});
-  }
-  items.push_back({MenuAction::TOGGLE_BOOKMARK, StrId::STR_TOGGLE_BOOKMARK});
-  items.push_back({MenuAction::NIGHT_MODE, StrId::STR_NIGHT_MODE});
+  mainItems.push_back({MenuAction::NIGHT_MODE, StrId::STR_NIGHT_MODE});
   if (Frontlight.present()) {
-    items.push_back({MenuAction::FRONTLIGHT, StrId::STR_FRONTLIGHT});
+    mainItems.push_back({MenuAction::FRONTLIGHT, StrId::STR_FRONTLIGHT});
   }
-  items.push_back({MenuAction::DICTIONARY, StrId::STR_LOOKUP});
-  items.push_back({MenuAction::ROTATE_SCREEN, StrId::STR_ORIENTATION});
-  items.push_back({MenuAction::AUTO_PAGE_TURN, StrId::STR_AUTO_TURN_PAGES_PER_MIN});
-  items.push_back({MenuAction::GO_TO_PERCENT, StrId::STR_GO_TO_PERCENT});
-  items.push_back({MenuAction::SCREENSHOT, StrId::STR_SCREENSHOT_BUTTON});
-  items.push_back({MenuAction::DISPLAY_QR, StrId::STR_DISPLAY_QR});
-  items.push_back({MenuAction::GO_HOME, StrId::STR_GO_HOME_BUTTON});
-  items.push_back({MenuAction::SYNC, StrId::STR_SYNC_PROGRESS});
-  items.push_back({MenuAction::DELETE_CACHE, StrId::STR_DELETE_CACHE});
-  items.push_back({MenuAction::TEXT_SETTINGS, StrId::STR_TEXT_SETTINGS});
+  mainItems.push_back({MenuAction::DICTIONARY, StrId::STR_LOOKUP});
+  mainItems.push_back({MenuAction::ROTATE_SCREEN, StrId::STR_ORIENTATION});
+  mainItems.push_back({MenuAction::AUTO_PAGE_TURN, StrId::STR_AUTO_TURN_PAGES_PER_MIN});
+  mainItems.push_back({MenuAction::GO_TO_PERCENT, StrId::STR_GO_TO_PERCENT});
+  mainItems.push_back({MenuAction::SCREENSHOT, StrId::STR_SCREENSHOT_BUTTON});
+  mainItems.push_back({MenuAction::DISPLAY_QR, StrId::STR_DISPLAY_QR});
+  mainItems.push_back({MenuAction::GO_HOME, StrId::STR_GO_HOME_BUTTON});
+  mainItems.push_back({MenuAction::SYNC, StrId::STR_SYNC_PROGRESS});
+  mainItems.push_back({MenuAction::DELETE_CACHE, StrId::STR_DELETE_CACHE});
+  mainItems.push_back(
+      {MenuAction::TOGGLE_FINISHED, isFinished ? StrId::STR_MARK_UNFINISHED : StrId::STR_MARK_FINISHED});
+  // Hidden entirely when reading-stats tracking is off: nothing meaningful to show.
+  if (statsEnabled) {
+    mainItems.push_back({MenuAction::READING_STATS, StrId::STR_READING_STATS});
+  }
+
+  if (hasBookmarks) {
+    bookmarkItems.push_back({MenuAction::BOOKMARKS, StrId::STR_BOOKMARKS});
+  }
+  bookmarkItems.push_back({MenuAction::TOGGLE_BOOKMARK, StrId::STR_TOGGLE_BOOKMARK});
+
+  textItems.push_back({MenuAction::TEXT_SETTINGS, StrId::STR_TEXT_SETTINGS});
+  return items;
+}
+
+void EpubReaderMenuActivity::buildFlatMenuItems(std::vector<MenuItem>& items, const bool hasFootnotes,
+                                                const bool hasBookmarks, const bool isFinished,
+                                                const bool statsEnabled) {
+  const TabMenuItems tabs = buildMenuItems(hasFootnotes, hasBookmarks, isFinished, statsEnabled);
+  items.clear();
+  for (const auto& tab : tabs) {
+    items.insert(items.end(), tab.begin(), tab.end());
+  }
+}
+
+void EpubReaderMenuActivity::onEnter() {
+  UiTabListActivity::onEnter();
+  // Open on the Main tab with its first row focused, matching the flat menu's behaviour (one
+  // Confirm reaches the first action); the other tabs remember their own rows.
+  for (auto& n : tabNavs) n.selected = 1;
+  rebuildRowItems();
+}
+
+void EpubReaderMenuActivity::rebuildRowItems() {
+  const auto& items = activeMenuItems();
+  rowItems_.clear();
+  rowValues_.clear();
+  rowItems_.reserve(items.size());
+  rowValues_.resize(items.size());
+  for (size_t i = 0; i < items.size(); i++) {
+    fui::ListItem item;
+    item.label = I18N.get(items[i].labelId);
+    item.actionValue = static_cast<int16_t>(i);
+    rowItems_.push_back(item);
+  }
+}
+
+const char* EpubReaderMenuActivity::tabLabel(const int index) const { return I18N.get(TAB_NAME_IDS[index]); }
+
+void EpubReaderMenuActivity::switchTab(const int direction) {
+  const bool onTabBar = ringPos() == 0;
+  constexpr int count = static_cast<int>(Tab::Count);
+  tab_ = static_cast<Tab>((static_cast<int>(tab_) + direction + count) % count);
+  rebuildRowItems();
+  auto& n = activeNav();
+  if (onTabBar) n.selected = 0;
+  if (n.selected > listCount()) n.selected = listCount();
+  n.followOnBuild = true;  // pull the new tab's viewport to its remembered selection
+  requestUpdate();
+}
+
+void EpubReaderMenuActivity::stepTab(const int direction) {
+  if (optionPopup.isActive()) return;
+  switchTab(direction);
+}
+
+void EpubReaderMenuActivity::onTabAction(const int index) {
+  if (optionPopup.isActive()) return;
+  if (tab_ != static_cast<Tab>(index)) {
+    tab_ = static_cast<Tab>(index);
+    rebuildRowItems();
+    auto& n = activeNav();
+    n.selected = 0;  // tab taps land with the tab bar focused
+    n.followOnBuild = true;
+    requestUpdate();
+  }
+  app.clearTapFlash();
 }
 
 void EpubReaderMenuActivity::closeCancelled() {
@@ -79,12 +151,14 @@ bool EpubReaderMenuActivity::handleHomeGesture() {
 
 void EpubReaderMenuActivity::activateIndex(const int index) {
   if (optionPopup.isActive()) return;
+  const auto& items = activeMenuItems();
+  if (index < 0 || index >= static_cast<int>(items.size())) return;
   // The activated row leaves this screen (popup or finish); a lingering flash
   // would gray an unrelated element on the next render.
   app.clearTapFlash();
-  nav.selected = index;
+  activeNav().selected = index + 1;
 
-  const auto selectedAction = menuItems[index].action;
+  const auto selectedAction = items[index].action;
   if (selectedAction == MenuAction::ROTATE_SCREEN) {
     optionPopup.show(StrId::STR_ORIENTATION, orientationLabels.data(), static_cast<int>(orientationLabels.size()),
                      pendingOrientation, [this](int idx) {
@@ -141,7 +215,11 @@ bool EpubReaderMenuActivity::handleButtons() {
   }
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    activateIndex(nav.selected);
+    if (ringPos() == 0) {
+      switchTab(1);
+    } else {
+      activateIndex(ringPos() - 1);
+    }
     return true;
   }
 
@@ -167,26 +245,32 @@ void EpubReaderMenuActivity::buildScreen(UiScreen& screen) {
   const fui::Rect band = screen.takeTop(static_cast<int16_t>(metrics.tabBarHeight));
   const int16_t pad = screen.theme().headerSidePadding;
   screen.target().text(band.inset(fui::Insets{0, pad, 0, pad}), progressLine.c_str(), screen.theme().smallText);
+
+  buildTabBar(screen);
   screen.spacer(static_cast<int16_t>(metrics.verticalSpacing));
 
-  // menuRowItems's labels/actionValue were set once in the constructor (see
-  // buildMenuRowItems()); only rows with live values need refreshing here.
-  for (size_t i = 0; i < menuItems.size(); i++) {
-    const auto action = menuItems[i].action;
+  // rowItems_'s labels/actionValue were set by rebuildRowItems(); only rows with live values need
+  // refreshing here.
+  const auto& items = activeMenuItems();
+  for (size_t i = 0; i < items.size() && i < rowItems_.size(); i++) {
+    const auto action = items[i].action;
     if (action == MenuAction::ROTATE_SCREEN) {
-      menuRowItems[i].value = I18N.get(orientationLabels[pendingOrientation]);
+      rowValues_[i] = I18N.get(orientationLabels[pendingOrientation]);
     } else if (action == MenuAction::AUTO_PAGE_TURN) {
-      menuRowItems[i].value = pageTurnLabels[selectedPageTurnOption];
+      rowValues_[i] = pageTurnLabels[selectedPageTurnOption];
     } else if (action == MenuAction::NIGHT_MODE) {
-      menuRowItems[i].value = I18N.get(SETTINGS.screenInverted ? StrId::STR_STATE_ON : StrId::STR_STATE_OFF);
+      rowValues_[i] = I18N.get(SETTINGS.screenInverted ? StrId::STR_STATE_ON : StrId::STR_STATE_OFF);
     } else if (action == MenuAction::FRONTLIGHT) {
-      menuRowItems[i].value = I18N.get(Frontlight.isOn() ? StrId::STR_STATE_ON : StrId::STR_STATE_OFF);
+      rowValues_[i] = I18N.get(Frontlight.isOn() ? StrId::STR_STATE_ON : StrId::STR_STATE_OFF);
+    } else {
+      rowValues_[i].clear();
     }
+    rowItems_[i].value = rowValues_[i].empty() ? nullptr : rowValues_[i].c_str();
   }
 
   fui::ListProps props;
-  props.items = menuRowItems;
-  props.count = static_cast<uint16_t>(menuItems.size());
+  props.items = rowItems_.data();
+  props.count = static_cast<uint16_t>(rowItems_.size());
   props.action = ACTION_ROW;
   props.inputMask = fui::InputTouch;  // physical buttons stay in loop()
   props.valueInset = 8;               // air between the value and the row edge
@@ -194,7 +278,7 @@ void EpubReaderMenuActivity::buildScreen(UiScreen& screen) {
   // maxLines=2 also marks the style caller-owned (see textStyleUnset).
   props.labelText = screen.theme().smallText;
   props.labelText.maxLines = 2;
-  syncListViewport(screen, props);
+  syncTabListViewport(screen, props);
   screen.list(props);
 }
 
@@ -206,6 +290,14 @@ void EpubReaderMenuActivity::drawChrome() {
   // indicator; the rest of the screen renders through the app.
   GUI.drawHeader(renderer, Rect{screen.x, screen.y + metrics.topPadding, screen.width, metrics.headerHeight},
                  title.c_str());
+}
+
+void EpubReaderMenuActivity::drawFooter() {
+  const char* confirmLabel = ringPos() == 0
+                                 ? I18N.get(TAB_NAME_IDS[(static_cast<int>(tab_) + 1) % static_cast<int>(Tab::Count)])
+                                 : tr(STR_SELECT);
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), confirmLabel, tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
 
 void EpubReaderMenuActivity::render(RenderLock&&) {
