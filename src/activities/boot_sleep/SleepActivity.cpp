@@ -27,7 +27,7 @@
 #include "activities/reader/ReaderUtils.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
-#include "images/Logo120.h"
+#include "images/CrossPointLogo120.h"
 #include "images/MoonIcon.h"
 
 namespace {
@@ -621,8 +621,10 @@ void SleepActivity::renderDefaultSleepScreen() const {
   const auto pageHeight = renderer.getScreenHeight();
 
   renderer.clearScreen();
-  renderer.drawImage(Logo120, (pageWidth - 120) / 2, (pageHeight - 120) / 2, 120, 120);
-  renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 70, tr(STR_CROSSPOINT), true, EpdFontFamily::BOLD);
+  renderer.drawImage(CrossPointLogo120, (pageWidth - 120) / 2, (pageHeight - 120) / 2, 120, 120);
+  // CrossFade: the sleep screen keeps the original CrossPoint logo and name (STR_CROSSPOINT is
+  // rebranded to "CrossFade" everywhere else).
+  renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 70, "CrossPoint", true, EpdFontFamily::BOLD);
   renderer.drawCenteredText(SMALL_FONT_ID, pageHeight / 2 + 95, tr(STR_SLEEPING));
 
   // Make sleep screen dark unless light is selected in settings

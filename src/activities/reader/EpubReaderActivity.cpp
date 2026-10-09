@@ -60,6 +60,14 @@ constexpr int PAGE_TURN_RATES[] = {1, 1, 3, 6, 12};
 constexpr size_t initialBookmarkCacheCapacity = 16;
 constexpr float bookmarkProgressEpsilon = 0.0001f;
 
+// CrossFade reading-stats dwell gating (see EpubReaderActivity::recordPageDwellTime). A dwell
+// longer than the idle threshold means the reader was left open (sleep, distraction), not actively
+// read; one shorter than the minimum is an accidental/instant double-turn, not a read page.
+constexpr uint32_t READING_STATS_IDLE_THRESHOLD_SECONDS = 5 * 60;
+constexpr uint32_t READING_STATS_MIN_DWELL_SECONDS = 2;
+// A session under this doesn't count as a qualifying "open" for sessionCount purposes.
+constexpr uint32_t READING_STATS_MIN_SESSION_SECONDS = 60;
+
 int clampPercent(int percent) {
   if (percent < 0) {
     return 0;
@@ -166,6 +174,9 @@ EpubReaderActivity::~EpubReaderActivity() {
     saveProgress(origin.spineIndex, origin.pageNumber, 0);
   }
 
+  // CrossFade reading stats: one batched write per session, while section/epub are still alive.
+  commitReadingStatsSession();
+
   section.reset();
   if (pendingReadFolderMove && epub) {
     const std::string srcPath = epub->getPath();
@@ -209,6 +220,17 @@ bool EpubReaderActivity::loadBook() {
   });
 
   epub->setupCacheDir();
+
+  // CrossFade reading stats: session start.
+  sessionReadingSeconds = 0;
+  if (SETTINGS.shouldTrackReadingStats()) {
+    stats = BookReadingStats::load(epub->getCachePath());
+    globalStats = GlobalReadingStats::load();
+  } else {
+    stats = BookReadingStats{};
+    globalStats = GlobalReadingStats{};
+  }
+  pageShownAtMs = millis();
 
   HalFile f;
   if (Storage.openFileForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
@@ -1063,7 +1085,80 @@ void EpubReaderActivity::toggleAutoPageTurn(const uint8_t selectedPageTurnOption
   }
 }
 
+void EpubReaderActivity::recordPageDwellTime(const bool isForwardTurn) {
+  if (!SETTINGS.shouldTrackReadingStats()) {
+    // Still bumped so a mid-session setting toggle doesn't read a stale timestamp as this page's
+    // dwell time -- but nothing below runs.
+    pageShownAtMs = millis();
+    return;
+  }
+
+  if (pageShownAtMs != 0UL) {
+    const unsigned long elapsedMs = millis() - pageShownAtMs;
+    const uint32_t elapsedSeconds = static_cast<uint32_t>(elapsedMs / 1000UL);
+    if (elapsedSeconds >= READING_STATS_MIN_DWELL_SECONDS && elapsedSeconds <= READING_STATS_IDLE_THRESHOLD_SECONDS) {
+      sessionReadingSeconds =
+          sessionReadingSeconds > UINT32_MAX - elapsedSeconds ? UINT32_MAX : sessionReadingSeconds + elapsedSeconds;
+      if (isForwardTurn) {
+        stats.recordForwardPageRead(elapsedSeconds);
+        stats.totalPagesTurned++;
+        globalStats.totalPagesTurned++;
+      }
+    }
+  }
+
+  pageShownAtMs = millis();
+}
+
+void EpubReaderActivity::refreshEstimatedTimeLeft() {
+  stats.estimatedTimeLeftSeconds = 0;
+  if (!epub || !section || stats.avgSecondsPerForwardPage == 0 || FINISHED_BOOKS.isFinished(epub->getPath())) {
+    return;
+  }
+
+  const size_t bookSize = epub->getBookSize();
+  const int totalPagesInSpine = section->estimatedTotalPages();
+  if (bookSize == 0 || totalPagesInSpine <= 0) {
+    return;
+  }
+
+  const size_t prevChapterSize = currentSpineIndex >= 1 ? epub->getCumulativeSpineItemSize(currentSpineIndex - 1) : 0;
+  const size_t cumulativeSize = epub->getCumulativeSpineItemSize(currentSpineIndex);
+  const size_t spineSize = cumulativeSize > prevChapterSize ? cumulativeSize - prevChapterSize : 0;
+  if (spineSize == 0) {
+    return;
+  }
+
+  // Pages left in the current chapter come from its real pagination; the rest of the book has no
+  // layout yet, so it's estimated at this chapter's own bytes-per-page density -- the same
+  // technique Epub::calculateProgress() uses for byte-weighted book progress.
+  const int pagesLeftInChapter = std::max(0, totalPagesInSpine - (section->currentPage + 1));
+  const size_t bytesAfterChapter = bookSize > cumulativeSize ? bookSize - cumulativeSize : 0;
+  const float pagesPerByte = static_cast<float>(totalPagesInSpine) / static_cast<float>(spineSize);
+  const float remainingPages =
+      static_cast<float>(pagesLeftInChapter) + static_cast<float>(bytesAfterChapter) * pagesPerByte;
+
+  const float estimatedSeconds = remainingPages * static_cast<float>(stats.avgSecondsPerForwardPage);
+  stats.estimatedTimeLeftSeconds = static_cast<uint32_t>(std::min(estimatedSeconds, static_cast<float>(UINT32_MAX)));
+}
+
+void EpubReaderActivity::commitReadingStatsSession() {
+  if (!SETTINGS.shouldTrackReadingStats() || !epub) return;
+  recordPageDwellTime(/*isForwardTurn=*/false);
+  if (sessionReadingSeconds >= READING_STATS_MIN_SESSION_SECONDS) {
+    stats.sessionCount++;
+    globalStats.totalSessions++;
+    stats.totalReadingSeconds += sessionReadingSeconds;
+    globalStats.totalReadingSeconds += sessionReadingSeconds;
+  }
+  refreshEstimatedTimeLeft();
+  stats.save(epub->getCachePath());
+  globalStats.save();
+  sessionReadingSeconds = 0;
+}
+
 bool EpubReaderActivity::pageTurn(bool isForwardTurn) {
+  recordPageDwellTime(isForwardTurn);
   if (!section) return false;
   {
     RenderLock lock;

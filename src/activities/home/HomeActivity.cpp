@@ -335,13 +335,9 @@ void HomeActivity::onEnter() {
   bool pinAvailable = !coverGridUi && SETTINGS.pinBookToHome && PINNED_BOOK.hasPinned() &&
                       Storage.exists(PINNED_BOOK.getPinnedPath().c_str());
   if (pinAvailable) {
-    bool anyNonMissingRecent = false;
-    for (const auto& book : RECENT_BOOKS.getBooks()) {
-      if (!RecentBooksStore::isMissing(book)) {
-        anyNonMissingRecent = true;
-        break;
-      }
-    }
+    const auto& allRecent = RECENT_BOOKS.getBooks();
+    const bool anyNonMissingRecent = std::any_of(
+        allRecent.begin(), allRecent.end(), [](const RecentBook& book) { return !RecentBooksStore::isMissing(book); });
     const int continueReadingRow = (metrics.homeContinueReadingInMenu && anyNonMissingRecent) ? 1 : 0;
     const int totalFlatItems = 4 /* Browse, Library, Transfer, Settings */ + continueReadingRow + 1 /* Pinned */;
     const int menuTop = metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.homeMenuTopOffset;

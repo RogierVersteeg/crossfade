@@ -176,8 +176,8 @@ void pushOnSleep(GfxRenderer& renderer) {
     localKo = ProgressMapper::toSavedProgress(epub, local);
     if (getResult == KOReaderSyncClient::OK) {
       const CrossPointPosition remotePos = mapRemote(epub, remote, local, renderer);
-      localAhead = compareProgress(local, localKo.percentage, remotePos, remote.percentage) ==
-                   ProgressComparison::LocalAhead;
+      localAhead =
+          compareProgress(local, localKo.percentage, remotePos, remote.percentage) == ProgressComparison::LocalAhead;
     }
   }
   if (!localAhead) {
@@ -231,8 +231,8 @@ void pullFurthestOnOpen(const std::string& epubPath, GfxRenderer& renderer) {
     remotePos = mapRemote(epub, remote, local, renderer);
     if (hadLocal) {
       const SavedProgressPosition localKo = ProgressMapper::toSavedProgress(epub, local);
-      remoteAhead = compareProgress(local, localKo.percentage, remotePos, remote.percentage) ==
-                    ProgressComparison::RemoteAhead;
+      remoteAhead =
+          compareProgress(local, localKo.percentage, remotePos, remote.percentage) == ProgressComparison::RemoteAhead;
     } else {
       remoteAhead = remote.percentage > 0.0f;
     }

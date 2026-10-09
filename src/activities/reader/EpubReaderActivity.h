@@ -10,9 +10,11 @@
 #include <optional>
 #include <vector>
 
+#include "BookReadingStats.h"
 #include "BookmarkEntry.h"
 #include "ChapterPosition.h"
 #include "EpubReaderMenuActivity.h"
+#include "GlobalReadingStats.h"
 #include "ProgressMapper.h"
 #include "ReaderActivity.h"
 #include "ReaderToolbarUi.h"
@@ -32,6 +34,24 @@ class EpubReaderActivity final : public ReaderActivity {
   std::optional<uint32_t> pendingOffsetJump;
   unsigned long lastPageTurnTime = 0UL;
   unsigned long pageTurnDuration = 0UL;
+  // CrossFade reading stats: entirely no-op when !SETTINGS.shouldTrackReadingStats() -- see
+  // recordPageDwellTime()'s guard. pageShownAtMs is still set unconditionally (a bare millis()
+  // call), but nothing reads it, mutates stats/globalStats, or touches SD when the setting is off.
+  unsigned long pageShownAtMs = 0UL;
+  uint32_t sessionReadingSeconds = 0;
+  BookReadingStats stats;
+  GlobalReadingStats globalStats;
+  // Folds the current page's dwell time (since pageShownAtMs) into sessionReadingSeconds and, for
+  // a forward turn, into stats' running pace average. Discards dwell longer than the idle
+  // threshold (reader left open) or shorter than the minimum (accidental double-turn). Always
+  // resets pageShownAtMs to now.
+  void recordPageDwellTime(bool isForwardTurn);
+  // Recomputes stats.estimatedTimeLeftSeconds from the pace average and remaining pages (current
+  // chapter's real pagination + the rest of the book at this chapter's bytes-per-page density).
+  void refreshEstimatedTimeLeft();
+  // Session commit: final dwell, batched stats.bin + global_stats.bin save. Called once from the
+  // destructor while section/epub are still alive.
+  void commitReadingStatsSession();
   int8_t pendingManualTurn = 0;
   bool pendingPercentJump = false;
   float pendingSpineProgress = 0.0f;
