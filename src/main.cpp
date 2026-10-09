@@ -40,6 +40,7 @@
 #include "fontIds.h"
 #include "platform/UsbSerialJtagHandoff.h"
 #include "util/ButtonNavigator.h"
+#include "util/KOReaderAutoSync.h"
 #include "util/ScreenshotUtil.h"
 #include "util/Timezones.h"
 
@@ -299,6 +300,12 @@ void enterDeepSleep(bool fromTimeout = false) {
     // A stale Quick Resume frame must not replace the selected sleep screen during wake.
     Storage.remove(SLEEP_FRAME_FILE);
   }
+
+  // CrossFade: silent, best-effort KOSync push. The sleep screen is already painted, so nothing
+  // visible changes however long this takes; it no-ops (no radio) unless the sleep came from the
+  // reader, auto-sync is on and a saved WiFi network exists, is bounded, abortable by a button
+  // press, and disconnects on every exit path -- see KOReaderAutoSync::pushOnSleep().
+  KOReaderAutoSync::pushOnSleep(renderer);
 
   // Tear down WiFi so the modem power domain isn't held alive across deep sleep.
   // Wake from deep sleep is effectively a chip reset, so no state needs to survive.

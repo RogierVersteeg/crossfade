@@ -146,7 +146,7 @@ void TitlesListActivity::activateSelected() {
     enterSeries(selected);
   } else {
     app.clearTapFlash();
-    activityManager.goToReader(entries[selected].path, /*allowFastInitialRefresh=*/false);
+    activityManager.goToReader(entries[selected].path, /*allowFastInitialRefresh=*/false, /*checkRemoteProgress=*/true);
   }
 }
 

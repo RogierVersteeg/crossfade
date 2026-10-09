@@ -184,7 +184,8 @@ void CoverGridBrowserActivity::activateSelected() {
     enterSeries(selectedIndex);
   } else {
     // TODO(KOSync/Batch D): pass checkRemoteProgress=true once goToReader grows that parameter.
-    activityManager.goToReader(entries[selectedIndex].path, /*allowFastInitialRefresh=*/false);
+    activityManager.goToReader(entries[selectedIndex].path, /*allowFastInitialRefresh=*/false,
+                               /*checkRemoteProgress=*/true);
   }
 }
 

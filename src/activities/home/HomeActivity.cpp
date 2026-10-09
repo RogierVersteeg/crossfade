@@ -804,7 +804,9 @@ void HomeActivity::render(RenderLock&&) {
   }
 }
 
-void HomeActivity::onSelectBook(const std::string& path) { activityManager.goToReader(path); }
+void HomeActivity::onSelectBook(const std::string& path) {
+  activityManager.goToReader(path, /*allowFastInitialRefresh=*/false, /*checkRemoteProgress=*/true);
+}
 
 void HomeActivity::onFileBrowserOpen() {
   // Grouping needs every book's series known before the first page can render correctly, and the

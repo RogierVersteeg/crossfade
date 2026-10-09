@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 
@@ -59,6 +60,12 @@ struct KOReaderProgress {
  */
 class KOReaderSyncClient {
  public:
+  // CrossFade: checked periodically during a request (between header lines and body chunks);
+  // returning true aborts the transfer cleanly (forwards to SecureHttpClient's own AbortCallback).
+  // Used by the auto-sync paths (KOReaderAutoSync) to bail out promptly on a button press. nullptr
+  // (the default) never aborts, preserving existing callers' behavior.
+  using AbortCallback = std::function<bool()>;
+
   enum Error {
     OK = 0,
     NO_CREDENTIALS,
@@ -91,14 +98,15 @@ class KOReaderSyncClient {
    * @param outProgress Output: the progress data
    * @return OK on success, NOT_FOUND if no progress exists, error code on failure
    */
-  static Error getProgress(const std::string& documentHash, KOReaderProgress& outProgress);
+  static Error getProgress(const std::string& documentHash, KOReaderProgress& outProgress,
+                           const AbortCallback& shouldAbort = nullptr);
 
   /**
    * Update reading progress for a document.
    * @param progress The progress data to upload
    * @return OK on success, error code on failure
    */
-  static Error updateProgress(const KOReaderProgress& progress);
+  static Error updateProgress(const KOReaderProgress& progress, const AbortCallback& shouldAbort = nullptr);
 
   /**
    * Get human-readable error message.

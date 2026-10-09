@@ -32,6 +32,7 @@
 #include "util/BmpViewerActivity.h"
 #include "util/FrontlightPanelActivity.h"
 #include "util/FullScreenMessageActivity.h"
+#include "util/KOReaderAutoSync.h"
 
 static portMUX_TYPE activityManagerSpinlock = portMUX_INITIALIZER_UNLOCKED;
 
@@ -318,7 +319,13 @@ void ActivityManager::goToTransferAndSync() {
   replaceActivity(std::move(activity));
 }
 
-void ActivityManager::goToReader(std::string path, const bool allowFastInitialRefresh) {
+void ActivityManager::goToReader(std::string path, const bool allowFastInitialRefresh, const bool checkRemoteProgress) {
+  if (checkRemoteProgress) {
+    // Silent, best-effort: no-ops immediately unless auto-sync is on and a saved WiFi network and
+    // KOReader credentials exist; never blocks longer than its own short bound. Writes progress.bin
+    // directly when the server is further along, so the reader's own load path picks it up.
+    KOReaderAutoSync::pullFurthestOnOpen(path, renderer);
+  }
   if (path.empty()) {
     goToFileBrowser("/");
     return;
