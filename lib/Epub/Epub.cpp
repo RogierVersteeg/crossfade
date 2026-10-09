@@ -949,8 +949,7 @@ bool Epub::generateThumbBmpFromSource(int height) {
   zip.reset();
   setupCacheDir();
   const int targetWidth = static_cast<int>(height * 0.6);
-  return generateThumbBmpForCover(getThumbBmpPath(height), targetWidth, height, /*crop=*/true,
-                                  metadata->coverItemHref);
+  return generateThumbBmpForCover(getThumbBmpPath(height), targetWidth, height, /*crop=*/true, metadata->coverItemHref);
 }
 
 bool Epub::generateThumbBmp(int height) const {

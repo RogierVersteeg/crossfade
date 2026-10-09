@@ -222,8 +222,8 @@ void TitlesListActivity::openContextMenu(const LibraryGrouping::Entry& entry) {
   };
 
   startActivityForResult(std::make_unique<BookContextMenuActivity>(renderer, mappedInput, path, title,
-                                                                    BookContextMenuActivity::Available{}),
-                          std::move(handler));
+                                                                   BookContextMenuActivity::Available{}),
+                         std::move(handler));
 }
 
 void TitlesListActivity::onEnter() {
@@ -319,9 +319,9 @@ void TitlesListActivity::drawFooter() {
   // are a genuine horizontal pair, not the vertically-oriented page-turn keys "Up"/"Down" text
   // describes on X3/X4(Pro).
   const bool horizontalHint = mappedInput.frontLeftRightAreHorizontal();
-  const auto labels = mappedInput.mapLabels(
-      seriesTopIndex >= 0 ? tr(STR_BACK) : tr(STR_HOME), empty ? "" : tr(STR_OPEN),
-      empty ? "" : (horizontalHint ? tr(STR_DIR_LEFT) : tr(STR_DIR_UP)),
-      empty ? "" : (horizontalHint ? tr(STR_DIR_RIGHT) : tr(STR_DIR_DOWN)));
+  const auto labels =
+      mappedInput.mapLabels(seriesTopIndex >= 0 ? tr(STR_BACK) : tr(STR_HOME), empty ? "" : tr(STR_OPEN),
+                            empty ? "" : (horizontalHint ? tr(STR_DIR_LEFT) : tr(STR_DIR_UP)),
+                            empty ? "" : (horizontalHint ? tr(STR_DIR_RIGHT) : tr(STR_DIR_DOWN)));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }

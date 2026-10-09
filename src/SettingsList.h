@@ -188,7 +188,7 @@ inline std::vector<StrId> buildLongPressMenuValues() {
 }
 
 inline std::vector<StrId> homeThemeValues() {
-  static constexpr StrId VALUES[] = {StrId::STR_THEME_CLASSIC,     StrId::STR_THEME_LYRA,
+  static constexpr StrId VALUES[] = {StrId::STR_THEME_CLASSIC,       StrId::STR_THEME_LYRA,
                                      StrId::STR_THEME_LYRA_EXTENDED, StrId::STR_THEME_ROUNDEDRAFF,
                                      StrId::STR_THEME_LYRA_CAROUSEL, StrId::STR_THEME_COVER_GRID};
   const size_t count = UITheme::supportsCoverGrid() ? std::size(VALUES) : std::size(VALUES) - 1;
@@ -392,8 +392,8 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
         SettingInfo::Enum(StrId::STR_COVER_GRID_DIRECTION, &CrossPointSettings::coverGridDirection,
                           {StrId::STR_COVER_GRID_DIRECTION_VERTICAL, StrId::STR_COVER_GRID_DIRECTION_HORIZONTAL},
                           "coverGridDirection", StrId::STR_CAT_DISPLAY),
-        SettingInfo::Toggle(StrId::STR_SHOW_COVER_PROGRESS, &CrossPointSettings::showCoverProgress,
-                            "showCoverProgress", StrId::STR_CAT_SYSTEM),
+        SettingInfo::Toggle(StrId::STR_SHOW_COVER_PROGRESS, &CrossPointSettings::showCoverProgress, "showCoverProgress",
+                            StrId::STR_CAT_SYSTEM),
         SettingInfo::Toggle(StrId::STR_REMOVE_READ_FROM_RECENTS, &CrossPointSettings::removeReadBooksFromRecents,
                             "removeReadBooksFromRecents", StrId::STR_CAT_SYSTEM),
         SettingInfo::Toggle(StrId::STR_MOVE_FINISHED_TO_READ, &CrossPointSettings::moveFinishedToReadFolder,

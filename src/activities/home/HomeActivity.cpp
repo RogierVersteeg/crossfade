@@ -22,10 +22,10 @@
 #include "MappedInputManager.h"
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
+#include "activities/reader/EpubReaderUtils.h"
 #include "components/UITheme.h"
 #include "components/themes/lyra/LyraCarouselTheme.h"
 #include "fontIds.h"
-#include "activities/reader/EpubReaderUtils.h"
 
 int HomeActivity::getMenuItemCount() const {
   int count = 4;  // File Browser, Library, File transfer, Settings
@@ -217,10 +217,10 @@ void HomeActivity::loadRecentCovers(int coverHeight) {
       bool needsSide = false;
       bool needsLegacy = false;
       if (isCarouselTheme) {
-        const std::string centerPath = UITheme::getCoverThumbPath(
-            book.coverBmpPath, LyraCarouselTheme::kCenterThumbW, LyraCarouselTheme::kCenterThumbH);
+        const std::string centerPath = UITheme::getCoverThumbPath(book.coverBmpPath, LyraCarouselTheme::kCenterThumbW,
+                                                                  LyraCarouselTheme::kCenterThumbH);
         const std::string sidePath = UITheme::getCoverThumbPath(book.coverBmpPath, LyraCarouselTheme::kSideCoverW,
-                                                                 LyraCarouselTheme::kSideCoverH);
+                                                                LyraCarouselTheme::kSideCoverH);
         needsCenter = !Storage.exists(centerPath.c_str());
         needsSide = !Storage.exists(sidePath.c_str());
       } else {
@@ -278,8 +278,8 @@ void HomeActivity::loadRecentCovers(int coverHeight) {
             bool success = true;
             if (isCarouselTheme) {
               if (needsCenter)
-                success = xtc.generateThumbBmp(LyraCarouselTheme::kCenterThumbW, LyraCarouselTheme::kCenterThumbH) &&
-                          success;
+                success =
+                    xtc.generateThumbBmp(LyraCarouselTheme::kCenterThumbW, LyraCarouselTheme::kCenterThumbH) && success;
               if (needsSide)
                 success =
                     xtc.generateThumbBmp(LyraCarouselTheme::kSideCoverW, LyraCarouselTheme::kSideCoverH) && success;
@@ -493,7 +493,8 @@ void HomeActivity::loop() {
     // tap on the centered cover opens it, and a tap on an icon tile activates that menu entry.
     const int bookCount = static_cast<int>(recentBooks.size());
     const int menuOnlyCount = menuCount - bookCount;
-    const int center = bookCount == 0 ? -1
+    const int center =
+        bookCount == 0 ? -1
                        : (selectorIndex < bookCount ? selectorIndex : std::clamp(lastCarouselIndex, 0, bookCount - 1));
     const auto carouselSwipe = mappedInput.wasSwipe();
     if (center >= 0 &&
@@ -715,10 +716,9 @@ void HomeActivity::render(RenderLock&&) {
   // a genuine horizontal pair (distinct from Lyra Carousel's own separate Up/Down level-switch
   // buttons), not the vertically-oriented page-turn keys "Up"/"Down" text describes on X3/X4(Pro).
   const bool horizontalHint = mappedInput.frontLeftRightAreHorizontal();
-  const auto labels =
-      mappedInput.mapLabels(recentBooks.empty() ? "" : tr(STR_RESUME), tr(STR_SELECT),
-                            horizontalHint ? tr(STR_DIR_LEFT) : tr(STR_DIR_UP),
-                            horizontalHint ? tr(STR_DIR_RIGHT) : tr(STR_DIR_DOWN));
+  const auto labels = mappedInput.mapLabels(recentBooks.empty() ? "" : tr(STR_RESUME), tr(STR_SELECT),
+                                            horizontalHint ? tr(STR_DIR_LEFT) : tr(STR_DIR_UP),
+                                            horizontalHint ? tr(STR_DIR_RIGHT) : tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   // Lyra Carousel only: redraw the header as the LAST thing before the frame is pushed, so it's

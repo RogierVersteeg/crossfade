@@ -227,8 +227,7 @@ void fillPerspectiveSilhouette(const GfxRenderer& renderer, const int x, const i
   const int maxHeight = std::max(leftHeight, rightHeight);
   renderer.fillRect(x, y, width, maxHeight, false);
   for (int dx = 0; dx < width; ++dx) {
-    const int columnHeight =
-        (width <= 1) ? leftHeight : (leftHeight + ((rightHeight - leftHeight) * dx) / (width - 1));
+    const int columnHeight = (width <= 1) ? leftHeight : (leftHeight + ((rightHeight - leftHeight) * dx) / (width - 1));
     const int top = y + (maxHeight - columnHeight) / 2;
     renderer.fillRect(x + dx, top, 1, columnHeight, true);
   }
@@ -272,10 +271,10 @@ bool drawCroppedCover(const GfxRenderer& renderer, const std::string& coverBmpPa
 }
 }  // namespace
 
-void LyraCarouselTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std::vector<RecentBook>& recentBooks,
-                                            const int selectorIndex, bool& coverRendered, bool& coverBufferStored,
-                                            bool& bufferRestored, std::function<bool()> storeCoverBuffer,
-                                            float /*progressPercent*/) const {
+void LyraCarouselTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect,
+                                            const std::vector<RecentBook>& recentBooks, const int selectorIndex,
+                                            bool& coverRendered, bool& coverBufferStored, bool& bufferRestored,
+                                            std::function<bool()> storeCoverBuffer, float /*progressPercent*/) const {
   if (recentBooks.empty()) {
     drawEmptyRecents(renderer, rect);
     return;
@@ -343,8 +342,7 @@ void LyraCarouselTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, co
         if (bitmap.parseHeaders() == BmpReaderError::Ok) {
           renderer.fillRect(x, sideTileY, kNearSideW, sideHeight, false);
           renderer.drawPerspectiveBitmap(bitmap, x, sideTileY, kNearSideW, leftHeight, rightHeight);
-          renderer.maskRoundedRectOutsideCorners(x, sideTileY, kNearSideW, sideHeight, kSideCornerRadius,
-                                                 Color::White);
+          renderer.maskRoundedRectOutsideCorners(x, sideTileY, kNearSideW, sideHeight, kSideCornerRadius, Color::White);
           file.close();
           drawPerspectiveOutline(renderer, x, sideTileY, kNearSideW, leftHeight, rightHeight);
           return;
@@ -368,8 +366,8 @@ void LyraCarouselTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, co
 
   // --- Center cover ---
   const RecentBook& centerBook = recentBooks[centerIdx];
-  renderer.fillRect(centerRect.x - kCenterOutlineW, centerRect.y - kCenterOutlineW, centerRect.width + 2 * kCenterOutlineW,
-                    centerRect.height + 2 * kCenterOutlineW, false);
+  renderer.fillRect(centerRect.x - kCenterOutlineW, centerRect.y - kCenterOutlineW,
+                    centerRect.width + 2 * kCenterOutlineW, centerRect.height + 2 * kCenterOutlineW, false);
   if (drawCroppedCover(renderer, centerBook.coverBmpPath, centerRect)) {
     renderer.maskRoundedRectOutsideCorners(centerRect.x, centerRect.y, centerRect.width, centerRect.height,
                                            kCornerRadius, Color::White);
@@ -513,7 +511,7 @@ void LyraCarouselTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, const i
   renderer.fillRect(0, metrics.labelY, renderer.getScreenWidth(), metrics.labelLineHeight, false);
   if (selectedIndex >= 0 && selectedIndex < buttonCount && buttonLabel != nullptr) {
     const std::string label = renderer.truncatedText(kMenuLabelFontId, buttonLabel(selectedIndex).c_str(),
-                                                      renderer.getScreenWidth() - 40, EpdFontFamily::REGULAR);
+                                                     renderer.getScreenWidth() - 40, EpdFontFamily::REGULAR);
     const int labelWidth = renderer.getTextWidth(kMenuLabelFontId, label.c_str(), EpdFontFamily::REGULAR);
     renderer.drawText(kMenuLabelFontId, (renderer.getScreenWidth() - labelWidth) / 2, metrics.labelY + 2, label.c_str(),
                       true, EpdFontFamily::REGULAR);

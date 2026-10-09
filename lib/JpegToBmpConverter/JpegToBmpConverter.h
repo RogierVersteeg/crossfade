@@ -18,6 +18,6 @@ class JpegToBmpConverter {
   // existing caller's behavior. crop=false: letterbox-contained, so the output BMP's own
   // dimensions never exceed targetMaxWidth/targetMaxHeight and a caller that draws it at that
   // exact box size needs no further scaling.
-  static bool jpegFileTo1BitBmpStreamWithSize(HalFile& jpegFile, Print& bmpOut, int targetMaxWidth,
-                                              int targetMaxHeight, bool crop = true);
+  static bool jpegFileTo1BitBmpStreamWithSize(HalFile& jpegFile, Print& bmpOut, int targetMaxWidth, int targetMaxHeight,
+                                              bool crop = true);
 };
