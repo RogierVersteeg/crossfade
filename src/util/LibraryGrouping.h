@@ -7,7 +7,7 @@
 
 // Shared grouping/data-source layer for the Covers grid and Titles list: the seam where the two
 // otherwise-identically-shaped views (they differ only in cell layout, 2D-vs-1D navigation, and
-// draw style -- see CoverGridBrowserActivity/LibraryListActivity) diverge on "where entries come
+// draw style -- see CoverGridBrowserActivity/TitlesListActivity) diverge on "where entries come
 // from," without that divergence leaking into either activity's rendering or pagination code.
 //
 // Ungrouped (SETTINGS.groupBySeries off, or no valid index yet): loadLibraryEntries() returns one
@@ -71,7 +71,7 @@ std::vector<Entry> collapse(const std::vector<LibraryIndex::Entry>& indexEntries
 // flatten()) and only fall back to a live scan if none exists -- for a caller that just rebuilt
 // the index itself and knows it's current. Ignored when groupBySeries is true (already reads the
 // index in that case). Defaults to false so existing ungrouped callers keep their always-live-scan
-// guarantee (LibraryListActivity's Titles view, which never rebuilds on its own and must reflect
+// guarantee (TitlesListActivity's Titles view, which never rebuilds on its own and must reflect
 // the SD card exactly, not a possibly-stale index from some earlier Covers visit).
 std::vector<Entry> loadLibraryEntries(bool groupBySeries, bool preferIndexWhenFlat = false);
 

@@ -11,7 +11,7 @@
 namespace LibraryScanner {
 
 // Shared cap for anything that walks the whole library (CoverGridBrowserActivity's Covers grid,
-// LibraryListActivity's Titles list, LibraryIndexBuilder's delta rebuild) -- keeping it one symbol
+// TitlesListActivity's Titles list, LibraryIndexBuilder's delta rebuild) -- keeping it one symbol
 // means they can never disagree about how much of a very large card they each cover.
 constexpr size_t MAX_LIBRARY_BOOKS = 2000;
 
@@ -57,7 +57,7 @@ inline std::string basenameOf(const std::string& path) {
 // case-insensitive) instead of the scan's directory tree-walk order. Metadata-free -- filenames are
 // already known, so this costs nothing beyond the comparisons themselves -- unlike sorting by title,
 // which would require resolving every entry's metadata first. Used by both flattened-library views
-// (CoverGridBrowserActivity's Covers grid and LibraryListActivity's Titles list) so toggling between
+// (CoverGridBrowserActivity's Covers grid and TitlesListActivity's Titles list) so toggling between
 // them presents the same library in the same order. Templated on any T with a `.path` member (not
 // just LibraryScanner::Entry) so LibraryGrouping::Entry can reuse the same sort.
 template <typename T>

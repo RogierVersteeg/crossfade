@@ -1,4 +1,4 @@
-#include "LibraryListActivity.h"
+#include "TitlesListActivity.h"
 
 #include <Epub.h>
 #include <FsHelpers.h>
@@ -23,24 +23,24 @@ namespace {
 constexpr unsigned long LONG_PRESS_MS = 1000;
 }  // namespace
 
-LibraryListActivity::LibraryListActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
+TitlesListActivity::TitlesListActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
     : UiListActivity("LibraryList", renderer, mappedInput, /*wantsTouchLongPress=*/true) {}
 
-std::vector<LibraryGrouping::Entry>& LibraryListActivity::currentEntries() {
+std::vector<LibraryGrouping::Entry>& TitlesListActivity::currentEntries() {
   if (seriesTopIndex >= 0 && seriesTopIndex < static_cast<int>(topLevelEntries.size())) {
     return topLevelEntries[seriesTopIndex].members;
   }
   return topLevelEntries;
 }
 
-const std::vector<LibraryGrouping::Entry>& LibraryListActivity::currentEntries() const {
+const std::vector<LibraryGrouping::Entry>& TitlesListActivity::currentEntries() const {
   if (seriesTopIndex >= 0 && seriesTopIndex < static_cast<int>(topLevelEntries.size())) {
     return topLevelEntries[seriesTopIndex].members;
   }
   return topLevelEntries;
 }
 
-void LibraryListActivity::loadBooks() {
+void TitlesListActivity::loadBooks() {
   topLevelEntries = LibraryGrouping::loadLibraryEntries(SETTINGS.groupBySeries);
   rebuildRowItems();
 }
@@ -48,7 +48,7 @@ void LibraryListActivity::loadBooks() {
 // Derives rowItems from currentEntries(). Called whenever the current page's entry set changes
 // (loadBooks(), enterSeries(), exitSeries()) so buildScreen() reuses the cached rows on every
 // repaint instead of rebuilding them per render -- same convention as RecentBooksActivity.
-void LibraryListActivity::rebuildRowItems() {
+void TitlesListActivity::rebuildRowItems() {
   const auto& entries = currentEntries();
   rowItems.clear();
   rowItems.reserve(entries.size());
@@ -97,7 +97,7 @@ void LibraryListActivity::rebuildRowItems() {
       &entries, count);
 }
 
-void LibraryListActivity::computeHeaderText(const int index, std::string& outTitle, std::string& outSubtitle) const {
+void TitlesListActivity::computeHeaderText(const int index, std::string& outTitle, std::string& outSubtitle) const {
   outTitle.clear();
   outSubtitle.clear();
   const auto& entries = currentEntries();
@@ -123,20 +123,20 @@ void LibraryListActivity::computeHeaderText(const int index, std::string& outTit
   }
 }
 
-void LibraryListActivity::enterSeries(const int topLevelIndex) {
+void TitlesListActivity::enterSeries(const int topLevelIndex) {
   savedTopLevelSelectedIndex = topLevelIndex;
   seriesTopIndex = topLevelIndex;
   rebuildRowItems();
   moveSelectionTo(0);
 }
 
-void LibraryListActivity::exitSeries() {
+void TitlesListActivity::exitSeries() {
   seriesTopIndex = -1;
   rebuildRowItems();
   moveSelectionTo(savedTopLevelSelectedIndex);
 }
 
-void LibraryListActivity::activateSelected() {
+void TitlesListActivity::activateSelected() {
   auto& entries = currentEntries();
   const int selected = nav.selected;
   if (selected < 0 || selected >= static_cast<int>(entries.size())) {
@@ -150,20 +150,20 @@ void LibraryListActivity::activateSelected() {
   }
 }
 
-void LibraryListActivity::activateIndex(const int index) {
+void TitlesListActivity::activateIndex(const int index) {
   if (index < 0 || index >= listCount()) return;
   nav.selected = index;
   activateSelected();
 }
 
-void LibraryListActivity::onRowLongPress(const int index) {
+void TitlesListActivity::onRowLongPress(const int index) {
   const auto& entries = currentEntries();
   if (index < 0 || index >= static_cast<int>(entries.size()) || entries[index].isSeries) return;
   app.clearTapFlash();
   openContextMenu(entries[index]);
 }
 
-void LibraryListActivity::selectLastRead() {
+void TitlesListActivity::selectLastRead() {
   seriesTopIndex = -1;
   if (topLevelEntries.empty()) {
     return;
@@ -200,7 +200,7 @@ void LibraryListActivity::selectLastRead() {
   }
 }
 
-void LibraryListActivity::openContextMenu(const LibraryGrouping::Entry& entry) {
+void TitlesListActivity::openContextMenu(const LibraryGrouping::Entry& entry) {
   const std::string path = entry.path;
   const std::string title = entry.title;
 
@@ -226,7 +226,7 @@ void LibraryListActivity::openContextMenu(const LibraryGrouping::Entry& entry) {
                           std::move(handler));
 }
 
-void LibraryListActivity::onEnter() {
+void TitlesListActivity::onEnter() {
   UiListActivity::onEnter();
 
   loadBooks();
@@ -239,14 +239,14 @@ void LibraryListActivity::onEnter() {
   }
 }
 
-void LibraryListActivity::onExit() {
+void TitlesListActivity::onExit() {
   Activity::onExit();
   rowItems.clear();
   seriesLabelStorage.clear();
   topLevelEntries.clear();
 }
 
-bool LibraryListActivity::handleCustomInput() {
+bool TitlesListActivity::handleCustomInput() {
   // Long-press Confirm opens the per-book context menu; short-press (handled by the base's
   // handleButtons()) activates/drills in. wasLongPressed() fires once and suppresses the eventual
   // release via MappedInputManager::suppressNextRelease() -- ActivityManager::loop() consumes that
@@ -265,7 +265,7 @@ bool LibraryListActivity::handleCustomInput() {
   return false;
 }
 
-void LibraryListActivity::onBackButton() {
+void TitlesListActivity::onBackButton() {
   if (seriesTopIndex >= 0) {
     exitSeries();
   } else {
@@ -273,7 +273,7 @@ void LibraryListActivity::onBackButton() {
   }
 }
 
-void LibraryListActivity::drawChrome() {
+void TitlesListActivity::drawChrome() {
   const auto pageWidth = renderer.getScreenWidth();
   const auto& metrics = UITheme::getInstance().getMetrics();
   const auto& entries = currentEntries();
@@ -289,7 +289,7 @@ void LibraryListActivity::drawChrome() {
                  headerTitle.empty() ? nullptr : headerTitle.c_str(), subtitle.empty() ? nullptr : subtitle.c_str());
 }
 
-void LibraryListActivity::buildScreen(UiScreen& screen) {
+void TitlesListActivity::buildScreen(UiScreen& screen) {
   const auto& metrics = UITheme::getInstance().getMetrics();
   screen.setContentMarginFromScreen(fui::Insets{static_cast<int16_t>(metrics.topPadding + metrics.headerHeight), 0,
                                                 static_cast<int16_t>(metrics.buttonHintsHeight), 0});
@@ -313,7 +313,7 @@ void LibraryListActivity::buildScreen(UiScreen& screen) {
   screen.list(props);
 }
 
-void LibraryListActivity::drawFooter() {
+void TitlesListActivity::drawFooter() {
   const bool empty = currentEntries().empty();
   // See MappedInputManager::frontLeftRightAreHorizontal()'s comment: X4C's Left/Right-role buttons
   // are a genuine horizontal pair, not the vertically-oriented page-turn keys "Up"/"Down" text

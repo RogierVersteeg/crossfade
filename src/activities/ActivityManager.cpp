@@ -17,10 +17,10 @@
 #include "browser/OpdsBookBrowserActivity.h"
 #include "components/HeaderBackTapTarget.h"
 #include "home/CoverGridBrowserActivity.h"
-#include "home/LibraryListActivity.h"
 #include "home/CrashActivity.h"
 #include "home/FileBrowserActivity.h"
 #include "home/HomeActivity.h"
+#include "home/TitlesListActivity.h"
 #include "library/LibraryListActivity.h"
 #include "settings/LibraryIndexRebuildActivity.h"
 #include "network/CrossPointWebServerActivity.h"
@@ -286,7 +286,7 @@ void ActivityManager::goToCoverGridBrowser() {
 }
 
 void ActivityManager::goToLibraryList() {
-  replaceActivity(std::make_unique<LibraryListActivity>(renderer, mappedInput));
+  replaceActivity(std::make_unique<TitlesListActivity>(renderer, mappedInput));
 }
 
 void ActivityManager::goToLibraryIndexRebuild(std::function<void()> onDone) {

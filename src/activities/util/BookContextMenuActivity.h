@@ -6,7 +6,7 @@
 #include "components/OptionPopup.h"
 
 // Extensible per-book action menu, triggered by a long-press on the selected entry in
-// CoverGridBrowserActivity, LibraryListActivity, and RecentBooksActivity. A thin Activity (like
+// CoverGridBrowserActivity, TitlesListActivity, and RecentBooksActivity. A thin Activity (like
 // ConfirmationActivity) wrapping a single OptionPopup for the action list, chaining to a second
 // ConfirmationActivity for actions that need one. Reports back via BookActionResult{changed}:
 // true if the caller's list entry needs refreshing (Delete, RemoveFromRecents), false otherwise

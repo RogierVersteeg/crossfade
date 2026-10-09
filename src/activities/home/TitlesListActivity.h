@@ -18,9 +18,9 @@
 // LibraryGrouping), selecting it drills into a second-level page listing that series' books in
 // index order -- title as headline, author as subtitle, exactly like any other row. currentEntries()
 // is the only thing that differs between the top-level page and a series page.
-class LibraryListActivity final : public UiListActivity {
+class TitlesListActivity final : public UiListActivity {
  public:
-  explicit LibraryListActivity(GfxRenderer& renderer, MappedInputManager& mappedInput);
+  explicit TitlesListActivity(GfxRenderer& renderer, MappedInputManager& mappedInput);
   void onEnter() override;
   void onExit() override;
 
