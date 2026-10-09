@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <string>
 #include <vector>
 
 #include "./FileBrowserActivity.h"
@@ -23,6 +24,8 @@ class HomeActivity final : public Activity {
   bool recentsLoaded = false;
   bool firstRenderDone = false;
   bool hasOpdsServers = false;
+  // CrossFade: pinned-book row shown on the list home (see onEnter's fit check).
+  bool pinnedBookVisible = false;
   bool hasContinueReading = false;
   bool coverRendered = false;      // Track if cover has been rendered once
   bool coverBufferStored = false;  // Track if cover buffer is stored
@@ -40,8 +43,12 @@ class HomeActivity final : public Activity {
   const bool cleanInitialRefresh;
 
   // Convert HomeMenuItem to menu index (used in onEnter)
-  static int menuItemToIndex(HomeMenuItem item, bool hasOpdsUrl) {
+  static int menuItemToIndex(HomeMenuItem item, bool hasOpdsUrl, bool pinnedVisible) {
     int i = 0;
+    if (pinnedVisible) {
+      if (item == HomeMenuItem::PINNED) return i;
+      ++i;
+    }
     if (item == HomeMenuItem::FILE_BROWSER) return i;
     ++i;
     if (item == HomeMenuItem::LIBRARY) return i;
@@ -55,8 +62,9 @@ class HomeActivity final : public Activity {
   }
 
   // Convert menu index to HomeMenuItem (used in loop)
-  static HomeMenuItem indexToMenuItem(int idx, bool hasOpdsUrl) {
+  static HomeMenuItem indexToMenuItem(int idx, bool hasOpdsUrl, bool pinnedVisible) {
     int i = 0;
+    if (pinnedVisible && idx == i++) return HomeMenuItem::PINNED;
     if (idx == i++) return HomeMenuItem::FILE_BROWSER;
     if (idx == i++) return HomeMenuItem::LIBRARY;
     if (hasOpdsUrl && idx == i++) return HomeMenuItem::OPDS_BROWSER;
@@ -70,12 +78,18 @@ class HomeActivity final : public Activity {
   void onSettingsOpen();
   void onFileTransferOpen();
   void onOpdsBrowserOpen();
+  // CrossFade: the list home shows one Transfer & Sync row instead of separate OPDS Browser and
+  // File Transfer rows. With OPDS servers configured it opens a picker, otherwise File Transfer.
+  void onTransferAndSyncOpen();
+  // The cover-grid home (PSRAM boards) keeps upstream's own OPDS tab; only the list home folds
+  // OPDS into Transfer & Sync. This is the flag the index helpers must be fed.
+  bool hasOpdsMenuRow() const { return hasOpdsServers && coverGridUi != nullptr; }
 
   int getMenuItemCount() const;
   bool storeCoverBuffer();    // Store frame buffer for cover image
   bool restoreCoverBuffer();  // Restore frame buffer from stored cover
   void freeCoverBuffer();     // Free the stored cover buffer
-  void loadRecentBooks(int maxBooks);
+  void loadRecentBooks(int maxBooks, const std::string& excludePath = "");
   void loadRecentCovers(int coverHeight);
   void fillCoverGridFromLibrary();
   void resolveGridCoverPaths();

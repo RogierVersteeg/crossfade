@@ -21,6 +21,7 @@
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
 #include "OpdsServerStore.h"
+#include "PinnedBookStore.h"
 #include "RecentBooksStore.h"
 #include "activities/reader/EpubReaderUtils.h"
 #include "components/UITheme.h"
@@ -28,33 +29,45 @@
 #include "fontIds.h"
 
 int HomeActivity::getMenuItemCount() const {
-  int count = 4;  // File Browser, Library, File transfer, Settings
+  int count = 4;  // File Browser, Library, Transfer & Sync (or File Transfer), Settings
   if (!recentBooks.empty()) {
     count += recentBooks.size();
   }
-  if (hasOpdsServers) {
+  if (hasOpdsMenuRow()) {
+    count++;
+  }
+  if (pinnedBookVisible) {
     count++;
   }
   return count;
 }
 
-void HomeActivity::loadRecentBooks(int maxBooks) {
+void HomeActivity::loadRecentBooks(int maxBooks, const std::string& excludePath) {
   recentBooks.clear();
   const auto& books = RECENT_BOOKS.getBooks();
   recentBooks.reserve(coverGridUi ? maxBooks : std::min(static_cast<int>(books.size()), maxBooks));
 
+  // CrossFade: the pinned book (if visible) gets its own Home entry and stays put regardless of
+  // reading activity, so it's excluded here to keep "most recently read" reflecting whatever book
+  // was actually most recent besides it -- unless it's the only book, in which case it appears in
+  // both places rather than leaving Continue Reading empty.
+  bool excludedAny = false;
   for (const RecentBook& book : books) {
-    // Limit to maximum number of recent books
-    if (recentBooks.size() >= maxBooks) {
-      break;
-    }
-
-    // Skip if file no longer exists
-    if (RecentBooksStore::isMissing(book)) {
+    if (!excludePath.empty() && book.path == excludePath) {
+      excludedAny = true;
       continue;
     }
-
+    if (RecentBooksStore::isMissing(book)) continue;
+    if (static_cast<int>(recentBooks.size()) >= maxBooks) break;
     recentBooks.push_back(book);
+  }
+
+  if (recentBooks.empty() && excludedAny) {
+    for (const RecentBook& book : books) {
+      if (RecentBooksStore::isMissing(book)) continue;
+      if (static_cast<int>(recentBooks.size()) >= maxBooks) break;
+      recentBooks.push_back(book);
+    }
   }
 }
 
@@ -315,7 +328,32 @@ void HomeActivity::onEnter() {
     coverGridUi = makeUniqueNoThrow<CoverGridHomeUi>(renderer);
     if (!coverGridUi) LOG_ERR("HOME", "OOM: cover grid UI; using standard home");
   }
-  loadRecentBooks(coverGridUi ? CoverGridHomeUi::MAX_BOOKS : metrics.homeRecentBooksCount);
+  // CrossFade: pinned-book row, list home only (the cover-grid home has its own fixed layout).
+  // Shown when the setting is on, a pinned book exists on the card, and the extra row provably
+  // fits above the button-hints band for the current theme (getMenuBottomEdge mirrors each
+  // theme's drawButtonMenu geometry; homePinnedRowFitBuffer is the per-theme safety margin).
+  bool pinAvailable = !coverGridUi && SETTINGS.pinBookToHome && PINNED_BOOK.hasPinned() &&
+                      Storage.exists(PINNED_BOOK.getPinnedPath().c_str());
+  if (pinAvailable) {
+    bool anyNonMissingRecent = false;
+    for (const auto& book : RECENT_BOOKS.getBooks()) {
+      if (!RecentBooksStore::isMissing(book)) {
+        anyNonMissingRecent = true;
+        break;
+      }
+    }
+    const int continueReadingRow = (metrics.homeContinueReadingInMenu && anyNonMissingRecent) ? 1 : 0;
+    const int totalFlatItems = 4 /* Browse, Library, Transfer, Settings */ + continueReadingRow + 1 /* Pinned */;
+    const int menuTop = metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.homeMenuTopOffset;
+    const int bottomEdge = GUI.getMenuBottomEdge(renderer, menuTop, totalFlatItems);
+    // buttonHintsHeight is already 0 when hints are hidden (touch board or Hide Button Hints).
+    const int availableBottom = renderer.getScreenHeight() - metrics.buttonHintsHeight;
+    pinAvailable = (bottomEdge + metrics.homePinnedRowFitBuffer) <= availableBottom;
+  }
+  pinnedBookVisible = pinAvailable;
+
+  loadRecentBooks(coverGridUi ? CoverGridHomeUi::MAX_BOOKS : metrics.homeRecentBooksCount,
+                  pinnedBookVisible ? PINNED_BOOK.getPinnedPath() : "");
   hasContinueReading = !recentBooks.empty();
   if (coverGridUi) {
     fillCoverGridFromLibrary();
@@ -324,7 +362,9 @@ void HomeActivity::onEnter() {
   }
 
   const auto base = static_cast<int>(recentBooks.size());
-  selectorIndex = initialMenuItem == HomeMenuItem::NONE ? 0 : base + menuItemToIndex(initialMenuItem, hasOpdsServers);
+  selectorIndex = initialMenuItem == HomeMenuItem::NONE
+                      ? 0
+                      : base + menuItemToIndex(initialMenuItem, hasOpdsMenuRow(), pinnedBookVisible);
 
   // Trigger first update
   requestUpdate();
@@ -385,7 +425,10 @@ void HomeActivity::loop() {
       return;
     }
     const int menuIndex = selectorIndex - static_cast<int>(recentBooks.size());
-    switch (indexToMenuItem(menuIndex, hasOpdsServers)) {
+    switch (indexToMenuItem(menuIndex, hasOpdsMenuRow(), pinnedBookVisible)) {
+      case HomeMenuItem::PINNED:
+        onSelectBook(PINNED_BOOK.getPinnedPath());
+        break;
       case HomeMenuItem::FILE_BROWSER:
         onFileBrowserOpen();
         break;
@@ -396,7 +439,11 @@ void HomeActivity::loop() {
         onOpdsBrowserOpen();
         break;
       case HomeMenuItem::FILE_TRANSFER:
-        onFileTransferOpen();
+        if (coverGridUi) {
+          onFileTransferOpen();
+        } else {
+          onTransferAndSyncOpen();
+        }
         break;
       case HomeMenuItem::SETTINGS_MENU:
         onSettingsOpen();
@@ -686,13 +733,24 @@ void HomeActivity::render(RenderLock&&) {
                           std::bind(&HomeActivity::storeCoverBuffer, this), recentProgressPercent);
 
   // Build menu items dynamically
-  std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_LIBRARY), tr(STR_FILE_TRANSFER),
+  // CrossFade: one Transfer & Sync row replaces the OPDS Browser + File Transfer pair on the list
+  // home (see onTransferAndSyncOpen); the cover-grid home keeps upstream's separate OPDS tab.
+  std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_LIBRARY),
+                                        hasOpdsServers ? tr(STR_TRANSFER_AND_SYNC) : tr(STR_FILE_TRANSFER),
                                         tr(STR_SETTINGS_TITLE)};
   std::vector<UIIcon> menuIcons = {Folder, Library, Transfer, Settings};
 
-  if (hasOpdsServers) {
+  if (hasOpdsMenuRow()) {
     menuItems.insert(menuItems.begin() + 2, tr(STR_OPDS_BROWSER));
     menuIcons.insert(menuIcons.begin() + 2, Blocks);
+  }
+
+  if (pinnedBookVisible) {
+    // Pinned Book's selectorIndex slot (see indexToMenuItem) sits directly above the base menu
+    // items and below Continue Reading's slot -- inserted here, before the Continue Reading insert
+    // below, so that insert pushes it to sit visually above Pinned Book.
+    menuItems.insert(menuItems.begin(), PINNED_BOOK.getPinnedTitle().c_str());
+    menuIcons.insert(menuIcons.begin(), Pin);
   }
 
   if (metrics.homeContinueReadingInMenu && !recentBooks.empty()) {
@@ -789,3 +847,12 @@ void HomeActivity::onSettingsOpen() { activityManager.goToSettings(); }
 void HomeActivity::onFileTransferOpen() { activityManager.goToFileTransfer(); }
 
 void HomeActivity::onOpdsBrowserOpen() { activityManager.goToBrowser(); }
+
+void HomeActivity::onTransferAndSyncOpen() {
+  if (hasOpdsServers) {
+    activityManager.goToTransferAndSync();
+  } else {
+    // No OPDS servers configured: straight to File Transfer, the same one-tap experience as before.
+    activityManager.goToFileTransfer();
+  }
+}

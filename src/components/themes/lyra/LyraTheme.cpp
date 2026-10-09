@@ -20,6 +20,7 @@
 #include "components/icons/folder.h"
 #include "components/icons/hotspot.h"
 #include "components/icons/library.h"
+#include "components/icons/pin.h"
 #include "components/icons/recent.h"
 #include "components/icons/settings2.h"
 #include "components/icons/transfer.h"
@@ -56,6 +57,8 @@ const uint8_t* iconForName(UIIcon icon) {
       return HotspotIcon;
     case UIIcon::Bookmark:
       return BookmarkIcon;
+    case UIIcon::Pin:
+      return PinIcon;
     case UIIcon::Blocks:
       return BlocksIcon;
     default:

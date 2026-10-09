@@ -80,6 +80,10 @@ struct ThemeMetrics {
   int homeRecentBooksCount;
   bool homeContinueReadingInMenu;
   int homeMenuTopOffset;
+  // CrossFade: extra px of headroom the pinned-book Home row's fit check (HomeActivity::onEnter)
+  // requires beyond the raw computed geometry before showing the row. 16 by default; a theme may
+  // reduce it if its real margin has been judged acceptable on-device.
+  int homePinnedRowFitBuffer;
 
   int buttonHintsHeight;
   int sideButtonHintsWidth;
@@ -188,6 +192,7 @@ constexpr ThemeMetrics values = {.batteryWidth = 15,
                                  .homeRecentBooksCount = 1,
                                  .homeContinueReadingInMenu = false,
                                  .homeMenuTopOffset = 10,
+                                 .homePinnedRowFitBuffer = 16,
                                  .buttonHintsHeight = 40,
                                  .sideButtonHintsWidth = 30,
                                  .progressBarHeight = 16,

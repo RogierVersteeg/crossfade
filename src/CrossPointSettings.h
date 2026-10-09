@@ -5,6 +5,7 @@
 #include <PersistableStore.h>
 
 #include <cstdint>
+#include <string>
 
 #include "util/HomeButtonInput.h"
 
@@ -351,6 +352,12 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   char sdFontFamilyName[32] = "";
   // Dictionary folder name under /dictionaries (empty = no dictionary)
   char dictionaryName[32] = "";
+  // CrossFade: user-settable device name shown to companion apps (currently: KOReader sync's
+  // "device" field). Empty, or shorter than MIN_DEVICE_NAME_LENGTH, means "use the hardware-based
+  // default" -- see getEffectiveDeviceName().
+  static constexpr uint8_t MIN_DEVICE_NAME_LENGTH = 2;
+  static constexpr uint8_t MAX_DEVICE_NAME_LENGTH = 20;
+  char deviceName[MAX_DEVICE_NAME_LENGTH + 1] = "";
   // Show hidden files/directories (starting with '.') in the file browser (0 = hidden, 1 = show)
   uint8_t showHiddenFiles = 0;
   // Show the title and author read from inside each book rather than its
@@ -381,6 +388,8 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // on). Default on; never shown for Browse Books/Library covers, where unread books would just
   // be visual noise.
   uint8_t showCoverProgress = 1;
+  // CrossFade: show the pinned book (if any) as its own entry on the Home screen (0 = off, 1 = on)
+  uint8_t pinBookToHome = 0;
   // Remove a book from the Recent Books list when its End-of-Book screen is reached (0 = off, 1 = on)
   uint8_t removeReadBooksFromRecents = 0;
   // Move epub to /Read/ folder on SD card when finished (0 = disabled, 1 = enabled)
@@ -501,6 +510,13 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
 
   static void validateFrontButtonMapping(CrossPointSettings& settings);
   static uint8_t sleepTimeoutEnumToMinutes(uint8_t legacyValue);
+
+  // True if name's length falls within [MIN_DEVICE_NAME_LENGTH, MAX_DEVICE_NAME_LENGTH].
+  static bool isValidDeviceName(const std::string& name);
+  // Hardware-based fallback used when deviceName is empty or too short ("CrossFade X3" etc.).
+  static std::string getDefaultDeviceName();
+  // deviceName if isValidDeviceName() accepts it, else getDefaultDeviceName().
+  std::string getEffectiveDeviceName() const;
 
   float getReaderLineCompression() const;
   unsigned long getSleepTimeoutMs() const;

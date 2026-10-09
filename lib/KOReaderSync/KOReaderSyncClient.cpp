@@ -224,7 +224,9 @@ KOReaderSyncClient::Error KOReaderSyncClient::updateProgress(const KOReaderProgr
   }
   doc["progress"] = progress.progress;
   doc["percentage"] = progress.percentage;
-  doc["device"] = DEVICE_NAME;
+  // CrossFade: the caller sets progress.device from the user-configurable device name; DEVICE_NAME
+  // only guards against a payload going out with a blank device field.
+  doc["device"] = progress.device.empty() ? DEVICE_NAME : progress.device;
   doc["device_id"] = DEVICE_ID;
   if (progress.position.has_value() && KOREADER_STORE.usesCrossPointSyncServer()) {
     // CrossPoint-specific extension: do not send it to third-party KOSync servers.

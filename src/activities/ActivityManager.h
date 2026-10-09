@@ -18,7 +18,7 @@
 class Activity;    // forward declaration
 class RenderLock;  // forward declaration
 
-enum class HomeMenuItem { NONE, FILE_BROWSER, LIBRARY, OPDS_BROWSER, FILE_TRANSFER, SETTINGS_MENU };
+enum class HomeMenuItem { NONE, PINNED, FILE_BROWSER, LIBRARY, OPDS_BROWSER, FILE_TRANSFER, SETTINGS_MENU };
 
 /**
  * ActivityManager
@@ -98,6 +98,10 @@ class ActivityManager {
   void goToLibraryIndexRebuild(std::function<void()> onDone);
   void goToCoverGridRecentBooks();
   void goToBrowser();
+  // CrossFade: picker shown when OPDS servers are configured (File Transfer + OPDS Browser). When
+  // none are configured, HomeActivity's Transfer & Sync row calls goToFileTransfer() directly --
+  // see HomeActivity::onTransferAndSyncOpen.
+  void goToTransferAndSync();
   void goToReader(std::string path, bool allowFastInitialRefresh = false);
   void goToSleep(bool fromTimeout = false);
   void goToBoot();

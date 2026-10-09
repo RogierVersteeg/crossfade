@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iterator>
 
+#include "CrossPointSettings.h"
 #include "FinishedBooksStore.h"
 #include "PinnedBookStore.h"
 #include "RecentBooksStore.h"
@@ -26,10 +27,10 @@ std::vector<BookContextMenuActivity::MenuItem> BookContextMenuActivity::buildMen
   if (available.removeFromRecents) {
     items.push_back({Action::RemoveFromRecents, StrId::STR_REMOVE_FROM_RECENTS});
   }
-  // Pin/Unpin is kept out of the menu on this branch: the pinned-book Home entry from CrossFade's
-  // main branch hasn't been ported onto the 1.6.5 Home screen yet, so the action would have no
-  // visible effect. PinnedBookStore stays so re-enabling is a one-line change here.
-  (void)isPinned;
+  // Pin/Unpin only makes sense while the pinned-book Home row is enabled (Settings > System).
+  if (SETTINGS.pinBookToHome) {
+    items.push_back({Action::TogglePinned, isPinned ? StrId::STR_UNPIN_FROM_HOME : StrId::STR_PIN_TO_HOME});
+  }
   items.push_back({Action::ToggleFinished, isFinished ? StrId::STR_MARK_UNFINISHED : StrId::STR_MARK_FINISHED});
   items.push_back({Action::ClearCache, StrId::STR_DELETE_CACHE});
   items.push_back({Action::Delete, StrId::STR_DELETE});

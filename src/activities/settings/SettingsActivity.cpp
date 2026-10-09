@@ -35,6 +35,7 @@
 #include "TextSettingsActivity.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/util/IntervalSelectionActivity.h"
+#include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"
 #include "components/UIThemeTokens.h"
 #include "components/UiAppHelpers.h"
@@ -294,6 +295,11 @@ void SettingsActivity::toggleCurrentSetting() {
     return;
   }
 
+  if (setting.nameId == StrId::STR_DEVICE_NAME) {
+    openDeviceNameEditor();
+    return;
+  }
+
   if (setting.type == SettingType::TOGGLE && setting.valuePtr != nullptr) {
     // Toggle the boolean value using the member pointer
     const bool currentValue = SETTINGS.*(setting.valuePtr);
@@ -491,6 +497,25 @@ void SettingsActivity::syncQuickResumeTimeoutForSleepScreen(bool sleepScreenChan
   }
 }
 
+void SettingsActivity::openDeviceNameEditor() {
+  // Prefilled with the effective (fallback-resolved) name so an unset device shows its hardware
+  // default as a starting point. A save shorter than MIN_DEVICE_NAME_LENGTH just means
+  // getEffectiveDeviceName() keeps falling back to the default.
+  startActivityForResult(std::make_unique<KeyboardEntryActivity>(
+                             renderer, mappedInput, tr(STR_DEVICE_NAME), SETTINGS.getEffectiveDeviceName(),
+                             CrossPointSettings::MAX_DEVICE_NAME_LENGTH, InputType::Text),
+                         [this](const ActivityResult& result) {
+                           if (!result.isCancelled) {
+                             const auto& kb = std::get<KeyboardResult>(result.data);
+                             strncpy(SETTINGS.deviceName, kb.text.c_str(), sizeof(SETTINGS.deviceName) - 1);
+                             SETTINGS.deviceName[sizeof(SETTINGS.deviceName) - 1] = '\0';
+                             SETTINGS.saveToFile();
+                             rebuildSettingsLists();
+                           }
+                           requestUpdate();
+                         });
+}
+
 void SettingsActivity::openSleepTimeoutPicker() {
   startActivityForResult(
       std::make_unique<IntervalSelectionActivity>(
@@ -529,6 +554,9 @@ std::string SettingsActivity::settingValueText(const SettingInfo& setting) {
       return I18N.get(enumLabels[value]);
     }
     return "";
+  }
+  if (setting.nameId == StrId::STR_DEVICE_NAME) {
+    return SETTINGS.getEffectiveDeviceName();
   }
   if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {
     if (setting.nameId == StrId::STR_TIME_TO_SLEEP) {
@@ -603,10 +631,12 @@ void SettingsActivity::drawChrome() {
 
 void SettingsActivity::drawFooter() {
   const int ring = ringPos();
-  const auto confirmLabel =
-      (ring == 0) ? I18N.get(categoryNames[(selectedCategoryIndex + 1) % categoryCount])
-                  : (ring > 0 && (*currentSettings)[ring - 1].nameId == StrId::STR_TIME_TO_SLEEP ? tr(STR_SELECT)
-                                                                                                 : tr(STR_TOGGLE));
+  const auto confirmLabel = (ring == 0)
+                                ? I18N.get(categoryNames[(selectedCategoryIndex + 1) % categoryCount])
+                                : (ring > 0 && ((*currentSettings)[ring - 1].nameId == StrId::STR_TIME_TO_SLEEP ||
+                                                (*currentSettings)[ring - 1].nameId == StrId::STR_DEVICE_NAME)
+                                       ? tr(STR_SELECT)
+                                       : tr(STR_TOGGLE));
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), confirmLabel, tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

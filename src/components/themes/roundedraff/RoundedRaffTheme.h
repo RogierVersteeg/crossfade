@@ -51,6 +51,10 @@ constexpr ThemeMetrics values = {.batteryWidth = 15,
                                  .homeRecentBooksCount = 1,
                                  .homeContinueReadingInMenu = true,
                                  .homeMenuTopOffset = 20,
+                                 // RoundedRaff spends a menu row on Continue Reading, so with Pinned
+                                 // configured its real margin is only ~3px (measured on an X3);
+                                 // 0 trusts that geometry, scoped to this theme only.
+                                 .homePinnedRowFitBuffer = 0,
                                  .buttonHintsHeight = 40,
                                  .sideButtonHintsWidth = 30,
                                  .progressBarHeight = 16,
